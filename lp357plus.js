@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.5
+// @version    0.6
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @grant      GM_addStyle
@@ -15,10 +15,10 @@ const getSetList = async () => {
     return await myJson;
 }
 
-const checkNew = '<div><label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości</span></label></div>';
-const checkBet = '<div><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (TOP10)</span></label></div>';
-
 const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
+
+const getCheckNew = (amount) => `<div><label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
+const getCheckBet = (amount) => `<div><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (TOP10) - ${amount} pozycji</span></label></div>`;
 
 const getTagLog = (lastP, change, times) => {
     return `<div class="chart-item__info tagLog"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>tygodnie: ${times}</span></div>`
@@ -33,9 +33,11 @@ const setCheckbox = (element, second, list, isHide) => {
 }
 
 const addCheckboxes = (listNew, listBet) => {
+    const checkNew = getCheckNew(listNew.length);
     voteList.insertAdjacentHTML('afterbegin', checkNew);
     const onlyNew = voteList.querySelector("#onlyNew");
 
+    const checkBet = getCheckBet(listBet.length);
     voteList.insertAdjacentHTML('afterbegin', checkBet);
     const hideBet = voteList.querySelector("#hideBet");
 
