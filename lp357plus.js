@@ -2,7 +2,7 @@
 // @name       LP357+
 // @version    0.5
 // @include    https://lista.radio357.pl/app/lista/glosowanie
-// @updateUrl  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
+// @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @grant      GM_addStyle
 // ==/UserScript==
 
