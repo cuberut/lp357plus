@@ -2,59 +2,69 @@
 // @name       LP357+
 // @version    0.5
 // @include    https://lista.radio357.pl/app/lista/glosowanie
-// @grant      none
+// @updateUrl  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
+// @grant      GM_addStyle
 // ==/UserScript==
 
+GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }");
+GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
+
 const getSetList = async () => {
-	const response = await fetch('https://opensheet.vercel.app/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
-	const myJson = await response.json();
-	return await myJson;
+    const response = await fetch('https://opensheet.vercel.app/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
+    const myJson = await response.json();
+    return await myJson;
 }
 
-const newTag = '<span class="badge badge-primary" style="position: absolute; right: 0; margin-right: 80px;">Nowość!</span>';
-const checkNew = '<div><label class="form-check-label"><input id="onlyNew" type="checkbox" onClick="showOnlyNew(this.checked)"><span>Pokaż tylko nowości</span></label></div>';
-const checkBet = '<div><label class="form-check-label"><input id="hideBet" type="checkbox" onClick="hideBetoned(this.checked)"><span>Ukryj beton</span></label></div>';
+const checkNew = '<div><label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości</span></label></div>';
+const checkBet = '<div><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (TOP10)</span></label></div>';
 
-const getLogTag = (lastP, change, times) => {
-	`<div class="chart-item__info" style="width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>tygodnie: ${times}</span></div>`
+const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
+
+const getTagLog = (lastP, change, times) => {
+    return `<div class="chart-item__info tagLog"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>tygodnie: ${times}</span></div>`
 };
 
-let voteList, currItem, newList, betList, onlyNew, hideBet;
+const setCheckbox = (element, second, list, isHide) => {
+    element.onclick = (e) => {
+        const checked = e.target.checked;
+        currItem.forEach((item, i) => { item.hidden = (checked && list.includes(i) == isHide) });
+        second.checked = false;
+    }
+}
+
+const addCheckboxes = (listNew, listBet) => {
+    voteList.insertAdjacentHTML('afterbegin', checkNew);
+    const onlyNew = voteList.querySelector("#onlyNew");
+
+    voteList.insertAdjacentHTML('afterbegin', checkBet);
+    const hideBet = voteList.querySelector("#hideBet");
+
+    setCheckbox(onlyNew, hideBet, listNew, false);
+    setCheckbox(hideBet, onlyNew, listBet, true);
+}
+
+let voteList, currItem;
 
 const addTags = () => {
-	getSetList().then(setList => {
-  		voteList = document.querySelector('.vote-list')
-  		
-		voteList.insertAdjacentHTML('afterbegin', checkNew);
-		onlyNew = voteList.querySelector('#onlyNew');
-		
-		voteList.insertAdjacentHTML('afterbegin', checkBet);
-		hideBet = voteList.querySelector('#hideBet');
+    getSetList().then(setList => {
+        voteList = document.querySelector('.vote-list')
+        currItem = voteList.querySelectorAll(".list-group-item");
 
-  		currItem = voteList.querySelectorAll(".list-group-item");
-  		setList.forEach((item, i) => {
-        	const {lastP, change, times, isNew} = item;
-			if (lastP) {
-            	const logTag = getLogTag(lastP, change, times);
-				currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', logTag);
-			} else if (isNew) {
-	            currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', newTag);
-    	    }
-  	});
+        setList.forEach((item, i) => {
+            const {lastP, change, times, isNew} = item;
+            if (lastP) {
+                const tagLog = getTagLog(lastP, change, times);
+                currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
+            } else if (isNew) {
+                currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagNew);
+            }
+        });
 
-  	newList = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
-	betList = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
-  });
-}
+        const listNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
+        const listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
 
-window.showOnlyNew = (state) => {
-	currItem.forEach((item, i) => { item.hidden = state && !newList.includes(i) });
-	hideBet.checked = false;
-}
-
-window.hideBetoned = (state) => {
-	currItem.forEach((item, i) => { item.hidden = state && betList.includes(i) });
-	onlyNew.checked = false;
+        addCheckboxes(listNew, listBet);
+    });
 }
 
 (function() {
