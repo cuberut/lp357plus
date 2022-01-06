@@ -20,7 +20,7 @@ const getSetList = async () => {
 const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
 
 const getCheckNew = (amount) => `<div class="half"><label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
-const getCheckBet = (amount) => `<div class="half"><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (TOP10) - ${amount} pozycji</span></label></div>`;
+const getCheckBet = (amount) => `<div class="half"><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (<i title="Dotyczy uworów z TOP10 oraz będących w zestawieniu dłuzej niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label></div>`;
 const getCheckIsPL = (amount) => `<div class="half"><label class="form-check-label"><input id="onlyIsPL" type="checkbox"><span>Pokaż tylko naszych - ${amount} pozycji</span></label></div>`;
 const getCheckNoPL = (amount) => `<div class="half"><label class="form-check-label"><input id="onlyNoPL" type="checkbox"><span>Pokaż tylko zagranice - ${amount} pozycji</span></label></div>`;
 
