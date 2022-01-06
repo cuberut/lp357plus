@@ -1,6 +1,7 @@
 // ==UserScript==
+// @author     cuberut
 // @name       LP357+
-// @version    0.6
+// @version    0.7
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @grant      GM_addStyle
@@ -8,6 +9,7 @@
 
 GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }");
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
+GM_addStyle("div.half { float: left; width: 50%; }");
 
 const getSetList = async () => {
     const response = await fetch('https://opensheet.vercel.app/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
@@ -17,32 +19,45 @@ const getSetList = async () => {
 
 const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
 
-const getCheckNew = (amount) => `<div><label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
-const getCheckBet = (amount) => `<div><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (TOP10) - ${amount} pozycji</span></label></div>`;
+const getCheckNew = (amount) => `<div class="half"><label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
+const getCheckBet = (amount) => `<div class="half"><label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (TOP10) - ${amount} pozycji</span></label></div>`;
+const getCheckIsPL = (amount) => `<div class="half"><label class="form-check-label"><input id="onlyIsPL" type="checkbox"><span>Pokaż tylko naszych - ${amount} pozycji</span></label></div>`;
+const getCheckNoPL = (amount) => `<div class="half"><label class="form-check-label"><input id="onlyNoPL" type="checkbox"><span>Pokaż tylko zagranice - ${amount} pozycji</span></label></div>`;
 
 const getTagLog = (lastP, change, times) => {
     return `<div class="chart-item__info tagLog"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>tygodnie: ${times}</span></div>`
 };
 
-const setCheckbox = (element, second, list, isHide) => {
+const setCheckbox = (element, rest, list, isHide = false) => {
     element.onclick = (e) => {
         const checked = e.target.checked;
         currItem.forEach((item, i) => { item.hidden = (checked && list.includes(i) == isHide) });
-        second.checked = false;
+        rest.forEach(x => { x.checked = false });
     }
 }
 
-const addCheckboxes = (listNew, listBet) => {
-    const checkNew = getCheckNew(listNew.length);
-    voteList.insertAdjacentHTML('afterbegin', checkNew);
-    const onlyNew = voteList.querySelector("#onlyNew");
+const addCheckboxes = (listNew, listBet, listIsPL, listNoPL) => {
+    const checkNoPL = getCheckNoPL(listNoPL.length);
+    voteList.insertAdjacentHTML('afterbegin', checkNoPL);
+    const onlyNoPL = voteList.querySelector("#onlyNoPL");
 
     const checkBet = getCheckBet(listBet.length);
     voteList.insertAdjacentHTML('afterbegin', checkBet);
     const hideBet = voteList.querySelector("#hideBet");
 
-    setCheckbox(onlyNew, hideBet, listNew, false);
-    setCheckbox(hideBet, onlyNew, listBet, true);
+    const checkIsPL = getCheckIsPL(listIsPL.length);
+    voteList.insertAdjacentHTML('afterbegin', checkIsPL);
+    const onlyIsPL = voteList.querySelector("#onlyIsPL");
+
+    const checkNew = getCheckNew(listNew.length);
+    voteList.insertAdjacentHTML('afterbegin', checkNew);
+    const onlyNew = voteList.querySelector("#onlyNew");
+
+    setCheckbox(onlyNew, [hideBet, onlyIsPL, onlyNoPL], listNew);
+    setCheckbox(hideBet, [onlyNew, onlyIsPL, onlyNoPL], listBet, true);
+
+    setCheckbox(onlyIsPL, [onlyNew, hideBet, onlyNoPL], listIsPL);
+    setCheckbox(onlyNoPL, [onlyNew, hideBet, onlyIsPL], listNoPL);
 }
 
 let voteList, currItem;
@@ -65,7 +80,10 @@ const addTags = () => {
         const listNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
         const listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
 
-        addCheckboxes(listNew, listBet);
+        const listIsPL = setList.reduce((list, item, i) => item.isPL ? [...list, i] : list, []);
+        const listNoPL = setList.reduce((list, item, i) => !item.isPL ? [...list, i] : list, []);
+
+        addCheckboxes(listNew, listBet, listIsPL, listNoPL);
     });
 }
 
