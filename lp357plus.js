@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.7
+// @version    0.8
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -9,7 +9,7 @@
 
 GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }");
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
-GM_addStyle("div.half { float: left; width: 50%; }");
+GM_addStyle("div.half { inline-block; width: 50%; }");
 
 const getSetList = async () => {
     const response = await fetch('https://opensheet.vercel.app/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
