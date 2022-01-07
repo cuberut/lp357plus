@@ -9,7 +9,7 @@
 
 GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }");
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
-GM_addStyle("div.half { inline-block; width: 50%; }");
+GM_addStyle("div.half { display: inline-block; width: 50%; }");
 
 const getSetList = async () => {
     const response = await fetch('https://opensheet.vercel.app/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
