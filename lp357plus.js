@@ -65,41 +65,46 @@ const addCheckboxes = (listNew, listBet, listIsPL, listNoPL) => {
 
 let voteList, currItem;
 
-const addTags = () => {
-    getSetList().then(setList => {
-        voteList = document.querySelector('.vote-list')
-        currItem = voteList.querySelectorAll(".list-group-item");
+const addTags = (setList) => {
+    voteList = document.querySelector('.vote-list')
+    currItem = voteList.querySelectorAll(".list-group-item");
 
-        setList.forEach((item, i) => {
-            const {lastP, change, times, isNew} = item;
-            if (lastP) {
-                const tagLog = getTagLog(lastP, change, times);
-                currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
-            } else if (isNew) {
-                currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagNew);
-            }
-        });
-
-        const listNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
-        const listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
-
-        const listIsPL = setList.reduce((list, item, i) => item.isPL ? [...list, i] : list, []);
-        const listNoPL = setList.reduce((list, item, i) => !item.isPL ? [...list, i] : list, []);
-
-        addCheckboxes(listNew, listBet, listIsPL, listNoPL);
+    setList.forEach((item, i) => {
+        const {lastP, change, times, isNew} = item;
+        if (lastP) {
+            const tagLog = getTagLog(lastP, change, times);
+            currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
+        } else if (isNew) {
+            currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagNew);
+        }
     });
+
+    const listNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
+    const listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
+
+    const listIsPL = setList.reduce((list, item, i) => item.isPL ? [...list, i] : list, []);
+    const listNoPL = setList.reduce((list, item, i) => !item.isPL ? [...list, i] : list, []);
+
+    addCheckboxes(listNew, listBet, listIsPL, listNoPL);
 }
 
 (function() {
-    let tempHeight = 0;
-    const interval = setInterval(() => {
-        if (tempHeight != document.body.scrollHeight) {
-            window.scrollTo(0, document.body.scrollHeight);
-            tempHeight = document.body.scrollHeight;
-        } else {
-            clearInterval(interval);
-            window.scrollTo(0, 0);
-            addTags();
-        }
-    }, 600);
+    const setList = getSetList().then(setList => {
+        const interval = setInterval(() => {
+            let voteList = document.querySelector('.vote-list');
+
+            if (voteList) {
+                let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
+                let hidden = voteList.querySelectorAll('.list-group-item[hidden]');
+
+                if (hidden.length < setList.length) {
+                    visible.forEach(item => { item.hidden = true });
+                } else {
+                    clearInterval(interval);
+                    hidden.forEach(item => { item.hidden = false });
+                    addTags(setList);
+                }
+            }
+        }, 500);
+    });
 })();
