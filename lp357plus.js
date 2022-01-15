@@ -92,14 +92,34 @@ const addTags = (setList) => {
 
 const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 'hidden' }
 
+const setSearch = (voteList, items) => {
+    const searchSection = voteList.querySelector('.vote-list__search');
+    searchSection.querySelector('#search').hidden = true;
+    searchSection.insertAdjacentHTML('afterbegin', `<input id="searchCustom" name="search" type="text" placeholder="Filtruj" class="form-control">`);
+    const searchCustom = searchSection.querySelector('#searchCustom');
+
+    const listElement = items.map(item => ({
+        element: item,
+        author: item.querySelector('.vote-item__author').innerText.toLowerCase(),
+        title: item.querySelector('.vote-item__title').innerText.toLowerCase()
+    }));
+
+    searchCustom.addEventListener('change', (e) => {
+        const value = e.target.value.toLowerCase();
+        listElement.map(item => {
+            item.element.hidden = !(item.author.includes(value) || item.title.includes(value));
+        });
+    });
+}
+
 (function() {
     showScroll(false);
     const setList = getSetList().then(setList => {
         const setCounter = setList.length;
 
         let voteList, loadbar, loading, progress;
-        let hidden = [];
-        let hiddenCounter = 0;
+        let items = [];
+        let itemsCounter = 0;
 
         const interval = setInterval(() => {
             if (!voteList) {
@@ -112,21 +132,20 @@ const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 
 
             let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
 
-            if (hiddenCounter < setCounter) {
+            if (itemsCounter < setCounter) {
                 visible.forEach(item => { item.hidden = true });
-                hiddenCounter += visible.length;
-                hidden = [...hidden, ...visible];
-
-                progress = (hiddenCounter/setCounter) * 100;
+                itemsCounter += visible.length;
+                items = [...items, ...visible];
+                progress = (itemsCounter/setCounter) * 100;
                 loading.style.width = progress + '%';
             } else {
                 loading.hidden = true;
-                voteList.style.opacity = 100;
-
+                setSearch(voteList, items);
                 clearInterval(interval);
-                hidden.forEach(item => { item.hidden = false });
+                items.forEach(item => { item.hidden = false });
                 showScroll(true);
                 addTags(setList);
+                voteList.style.opacity = 100;
             }
         }, 500);
     });
