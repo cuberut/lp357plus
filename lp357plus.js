@@ -101,5 +101,5 @@ const addTags = () => {
             window.scrollTo(0, 0);
             addTags();
         }
-    }, 500);
+    }, 600);
 })();
