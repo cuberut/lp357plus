@@ -1,15 +1,17 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9
+// @version    0.9.1
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @grant      GM_addStyle
 // ==/UserScript==
 
+GM_addStyle("div#loadbar { width: 100%; background-color: #ddd;}");
+GM_addStyle("div#loading { width: 0%; height: 2rem; background-color: #337AB7; padding: 0.25rem 0.5rem; }");
 GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }");
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
-GM_addStyle("div.filters > label { display: inline-block; width: 50%; }");
+GM_addStyle("div#filters > label { display: inline-block; width: 50%; }");
 
 const getSetList = async () => {
     const response = await fetch('https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
@@ -37,8 +39,8 @@ const setCheckbox = (element, rest, list, isHide = false) => {
 }
 
 const addCheckboxes = (listNew, listBet, listIsPL, listNoPL) => {
-    voteList.insertAdjacentHTML('afterbegin', `<div class="filters"></div>`);
-    const filters = voteList.querySelector(".filters");
+    voteList.insertAdjacentHTML('afterbegin', `<div id="filters"></div>`);
+    const filters = voteList.querySelector("#filters");
 
     const checkNew = getCheckNew(listNew.length);
     filters.insertAdjacentHTML('beforeend', checkNew);
@@ -90,20 +92,37 @@ const addTags = (setList) => {
 
 (function() {
     const setList = getSetList().then(setList => {
+        const setCounter = setList.length;
+
+        let voteList, loadbar, loading, progress;
+        let hidden = [];
+        let hiddenCounter = 0;
+
         const interval = setInterval(() => {
-            let voteList = document.querySelector('.vote-list');
+            if (!voteList) {
+                voteList = document.querySelector('.vote-list');
+                voteList.style.opacity = 0;
 
-            if (voteList) {
-                let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
-                let hidden = voteList.querySelectorAll('.list-group-item[hidden]');
+                voteList.insertAdjacentHTML('beforebegin', `<div id="loadbar"><div id="loading">Zaczytywanie.danych...</div></div>`);
+                loading = voteList.parentElement.querySelector("#loading");
+            }
 
-                if (hidden.length < setList.length) {
-                    visible.forEach(item => { item.hidden = true });
-                } else {
-                    clearInterval(interval);
-                    hidden.forEach(item => { item.hidden = false });
-                    addTags(setList);
-                }
+            let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
+
+            if (hiddenCounter < setCounter) {
+                visible.forEach(item => { item.hidden = true });
+                hiddenCounter += visible.length;
+                hidden = [...hidden, ...visible];
+
+                progress = (hiddenCounter/setCounter) * 100;
+                loading.style.width = progress + '%';
+            } else {
+                loading.hidden = true;
+                voteList.style.opacity = 100;
+
+                clearInterval(interval);
+                hidden.forEach(item => { item.hidden = false });
+                addTags(setList);
             }
         }, 500);
     });
