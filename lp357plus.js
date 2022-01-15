@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.1
+// @version    0.9.2
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -90,7 +90,10 @@ const addTags = (setList) => {
     addCheckboxes(listNew, listBet, listIsPL, listNoPL);
 }
 
+const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 'hidden' }
+
 (function() {
+    showScroll(false);
     const setList = getSetList().then(setList => {
         const setCounter = setList.length;
 
@@ -122,6 +125,7 @@ const addTags = (setList) => {
 
                 clearInterval(interval);
                 hidden.forEach(item => { item.hidden = false });
+                showScroll(true);
                 addTags(setList);
             }
         }, 500);
