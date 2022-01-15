@@ -103,7 +103,7 @@ const addTags = (setList) => {
                 voteList = document.querySelector('.vote-list');
                 voteList.style.opacity = 0;
 
-                voteList.insertAdjacentHTML('beforebegin', `<div id="loadbar"><div id="loading">Zaczytywanie.danych...</div></div>`);
+                voteList.insertAdjacentHTML('beforebegin', `<div id="loadbar"><div id="loading">Zaczytywanie danych...</div></div>`);
                 loading = voteList.parentElement.querySelector("#loading");
             }
 
