@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.3
+// @version    0.9.4
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -13,8 +13,11 @@ GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }")
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
 GM_addStyle("div#filters > label { display: inline-block; width: 50%; }");
 
-const getSetList = async () => {
-    const response = await fetch('https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList');
+const urlSettingsList = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/settingsList';
+const urlRemovedList = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/removedList'
+
+const getList = async (url) => {
+    const response = await fetch(url);
     const myJson = await response.json();
     return await myJson;
 }
@@ -91,6 +94,7 @@ const addTags = (setList) => {
 }
 
 const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 'hidden' }
+const toggleVisibility = (element) => { element.style.opacity = (element.style.opacity === '') ? 0 : '' }
 
 const setSearch = (voteList, items) => {
     const searchSection = voteList.querySelector('.vote-list__search');
@@ -112,9 +116,23 @@ const setSearch = (voteList, items) => {
     });
 }
 
+const addRemovedList = () => {
+    getList(urlRemovedList).then(rmList => {
+        const rightColumn = document.querySelector('.layout__right-column');
+        rightColumn.insertAdjacentHTML('afterbegin', `<div id="removedList"><strong>Usunięto ${rmList.length} utworów:</strong><div></div></div>`);
+        const removed = rightColumn.querySelector("#removedList div");
+
+        const removedString = rmList.reduce((string, item) => {
+            return string + `${item.author} - ${item.title}\n`
+        }, "");
+        removed.innerText = removedString;
+    });
+}
+
 (function() {
     showScroll(false);
-    const setList = getSetList().then(setList => {
+
+    getList(urlSettingsList).then(setList => {
         const setCounter = setList.length;
 
         let voteList, loadbar, loading, progress;
@@ -124,7 +142,7 @@ const setSearch = (voteList, items) => {
         const interval = setInterval(() => {
             if (!voteList) {
                 voteList = document.querySelector('.vote-list');
-                voteList.style.opacity = 0;
+                toggleVisibility(voteList);
 
                 voteList.insertAdjacentHTML('beforebegin', `<div id="loadbar"><div id="loading">Zaczytywanie danych...</div></div>`);
                 loading = voteList.parentElement.querySelector("#loading");
@@ -145,7 +163,8 @@ const setSearch = (voteList, items) => {
                 items.forEach(item => { item.hidden = false });
                 showScroll(true);
                 addTags(setList);
-                voteList.style.opacity = 100;
+                toggleVisibility(voteList);
+                addRemovedList();
             }
         }, 500);
     });
