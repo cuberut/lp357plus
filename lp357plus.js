@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.4
+// @version    0.9.5
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -22,15 +22,19 @@ const getList = async (url) => {
     return await myJson;
 }
 
-const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
-
 const getCheckNew = (amount) => `<label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
 const getCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (<i title="Dotyczy uworów z TOP10 oraz będących w zestawieniu dłuzej niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 const getCheckIsPL = (amount) => `<label class="form-check-label"><input id="onlyIsPL" type="checkbox"><span>Pokaż tylko naszych - ${amount} pozycji</span></label>`;
 const getCheckNoPL = (amount) => `<label class="form-check-label"><input id="onlyNoPL" type="checkbox"><span>Pokaż tylko zagranice - ${amount} pozycji</span></label>`;
 
-const getTagLog = (lastP, change, times) => {
-    return `<div class="chart-item__info tagLog"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>tygodnie: ${times}</span></div>`
+const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
+
+const getTagChartLog = (lastP, change, times, weeks) => {
+    return `<div class="chart-item__info tagLog"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>notowanie: ${times} tydzień</span><br/><span>propozycje: ${weeks} tydzień</span></div>`
+};
+
+const getTagRestLog = (weeks) => {
+    return `<div class="chart-item__info tagLog"><span>propozycje: ${weeks} tydzień</span></div>`
 };
 
 const setCheckbox = (element, rest, list, isHide = false) => {
@@ -75,12 +79,15 @@ const addTags = (setList) => {
     currItem = voteList.querySelectorAll(".list-group-item");
 
     setList.forEach((item, i) => {
-        const {lastP, change, times, isNew} = item;
-        if (lastP) {
-            const tagLog = getTagLog(lastP, change, times);
-            currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
-        } else if (isNew) {
+        const {lastP, change, times, isNew, weeks} = item;
+        if (isNew) {
             currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagNew);
+        } else if (lastP) {
+            const tagLog = getTagChartLog(lastP, change, times, weeks);
+            currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
+        } else {
+            const tagLog = getTagRestLog(weeks);
+            currItem[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
         }
     });
 
