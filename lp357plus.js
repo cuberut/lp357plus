@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.5
+// @version    0.9.6
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -23,14 +23,15 @@ const getList = async (url) => {
 }
 
 const getCheckNew = (amount) => `<label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
-const getCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (<i title="Dotyczy uworów z TOP10 oraz będących w zestawieniu dłuzej niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+const getCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox"><span>Ukryj beton (<i title="Dotyczy uworów z TOP35 oraz będących w zestawieniu dłuzej niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+const getCheckOld = (amount) => `<label class="form-check-label"><input id="hideOld" type="checkbox"><span>Ukryj starocie (<i title="Dotyczy uworów z poza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 const getCheckIsPL = (amount) => `<label class="form-check-label"><input id="onlyIsPL" type="checkbox"><span>Pokaż tylko naszych - ${amount} pozycji</span></label>`;
 const getCheckNoPL = (amount) => `<label class="form-check-label"><input id="onlyNoPL" type="checkbox"><span>Pokaż tylko zagranice - ${amount} pozycji</span></label>`;
 
 const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
 
 const getTagChartLog = (lastP, change, times, weeks) => {
-    return `<div class="chart-item__info tagLog"><span>Ostatnia poz.: ${lastP} (${change})</span><br/><span>notowanie: ${times} tydzień</span><br/><span>propozycje: ${weeks} tydzień</span></div>`
+    return `<div class="chart-item__info tagLog"><span>ostatnia poz.: ${lastP} (${change})</span><br/><span>notowanie: ${times} tydzień</span><br/><span>propozycje: ${weeks} tydzień</span></div>`
 };
 
 const getTagRestLog = (weeks) => {
@@ -45,7 +46,7 @@ const setCheckbox = (element, rest, list, isHide = false) => {
     }
 }
 
-const addCheckboxes = (listNew, listBet, listIsPL, listNoPL) => {
+const addCheckboxes = (listNew, listBet, listOld, listIsPL, listNoPL) => {
     voteList.insertAdjacentHTML('afterbegin', `<div id="filters"></div>`);
     const filters = voteList.querySelector("#filters");
 
@@ -65,11 +66,16 @@ const addCheckboxes = (listNew, listBet, listIsPL, listNoPL) => {
     filters.insertAdjacentHTML('beforeend', checkNoPL);
     const onlyNoPL = filters.querySelector("#onlyNoPL");
 
-    setCheckbox(onlyNew, [hideBet, onlyIsPL, onlyNoPL], listNew);
-    setCheckbox(hideBet, [onlyNew, onlyIsPL, onlyNoPL], listBet, true);
+    const checkOld = getCheckOld(listOld.length);
+    filters.insertAdjacentHTML('beforeend', checkOld);
+    const hideOld = filters.querySelector("#hideOld");
 
-    setCheckbox(onlyIsPL, [onlyNew, hideBet, onlyNoPL], listIsPL);
-    setCheckbox(onlyNoPL, [onlyNew, hideBet, onlyIsPL], listNoPL);
+    setCheckbox(onlyNew, [hideBet, hideOld, onlyIsPL, onlyNoPL], listNew);
+    setCheckbox(hideBet, [onlyNew, hideOld, onlyIsPL, onlyNoPL], listBet, true);
+    setCheckbox(hideOld, [onlyNew, hideBet, onlyIsPL, onlyNoPL], listOld, true);
+
+    setCheckbox(onlyIsPL, [onlyNew, hideBet, hideOld, onlyNoPL], listIsPL);
+    setCheckbox(onlyNoPL, [onlyNew, hideBet, hideOld, onlyIsPL], listNoPL);
 }
 
 let voteList, currItem;
@@ -93,11 +99,12 @@ const addTags = (setList) => {
 
     const listNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
     const listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
+    const listOld = setList.reduce((list, item, i) => item.isOld ? [...list, i] : list, []);
 
     const listIsPL = setList.reduce((list, item, i) => item.isPL ? [...list, i] : list, []);
     const listNoPL = setList.reduce((list, item, i) => !item.isPL ? [...list, i] : list, []);
 
-    addCheckboxes(listNew, listBet, listIsPL, listNoPL);
+    addCheckboxes(listNew, listBet, listOld, listIsPL, listNoPL);
 }
 
 const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 'hidden' }
@@ -105,6 +112,9 @@ const toggleVisibility = (element) => { element.style.opacity = (element.style.o
 
 const setSearch = (voteList, items) => {
     const searchSection = voteList.querySelector('.vote-list__search');
+
+    if (!searchSection) return;
+
     searchSection.querySelector('#search').hidden = true;
     searchSection.insertAdjacentHTML('afterbegin', `<input id="searchCustom" name="search" type="text" placeholder="Filtruj" class="form-control">`);
     const searchCustom = searchSection.querySelector('#searchCustom');
