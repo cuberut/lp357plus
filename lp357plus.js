@@ -1,6 +1,6 @@
  // ==UserScript==
 // @name       LP357+
-// @version    0.9.8
+// @version    0.9.9
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -13,6 +13,7 @@ GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }")
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
 GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
+GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
 
 const urlApi = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/';
 const urlSettingsList = urlApi + 'settingsList';
@@ -26,13 +27,11 @@ const getList = async (url) => {
 
 const setInfoStatus = (amount) => `<p id="infoStatus">Liczba widocznych utworów: <strong><span id="infoVisible">${amount}</span>/<span>${amount}</span></strong> (<span id="infoPercent">100</span>%)`;
 
-const setCheckNew = (amount) => `<label class="form-check-label"><input id="onlyNew" type="checkbox"><span>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
-const setCheckIsPL = (amount) => `<label class="form-check-label"><input id="onlyIsPL" type="checkbox"><span>Pokaż tylko naszych - ${amount} pozycji</span></label>`;
-const setCheckNoPL = (amount) => `<label class="form-check-label"><input id="onlyNoPL" type="checkbox"><span>Pokaż tylko zagranice - ${amount} pozycji</span></label>`;
+const setCheckIsNew = (amount) => `<label class="form-check-label"><input id="onlyIsNew" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
+const setCheckVoted = (amount) => `<label class="form-check-label"><input id="onlyVoted" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko moje typy - ${amount} pozycji</span></label>`;
 
-const setCheckBetTop = (amount) => `<label class="form-check-label"><input id="hideBetTop" type="checkbox"><span>Ukryj duży beton (<i title="Dotyczy uworów z miejsc 01-20 ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
-const setCheckBetBot = (amount) => `<label class="form-check-label"><input id="hideBetBot" type="checkbox"><span>Ukryj mały beton (<i title="Dotyczy uworów z miejsc 21-42 ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
-const setCheckOld = (amount) => `<label class="form-check-label"><input id="hideOld" type="checkbox"><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+const setCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox" ${amount || 'disabled'}><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+const setCheckOld = (amount) => `<label class="form-check-label"><input id="hideOld" type="checkbox" ${amount || 'disabled'}><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 
 const setSelectAddBy = () => `<label class="form-check-label">Pokaż tylko utwory zgłoszone przez:</label><select id="chooseAddBy"></select>`;
 
@@ -44,6 +43,10 @@ const getTagChartLog = (lastP, change, times, weeks) => {
 
 const getTagRestLog = (weeks) => {
     return `<div class="chart-item__info tagLog"><span>propozycje: ${weeks} tydzień</span></div>`
+};
+
+const getTagVotes = (item) => {
+    return `<div id="votes"><i class="${item.last ? 'fas' : 'far'} fa-star"></i><div class="small">(${item.count})</div></div>`
 };
 
 let extraTools, amountAll, infoVisible, infoPercent;
@@ -109,40 +112,29 @@ const addCheckboxes = () => {
     extraTools.insertAdjacentHTML('beforeend', `<p id="checkboxes"></p>`);
     checkboxes = voteList.querySelector("#checkboxes");
 
-    const checkNew = setCheckNew( listNew.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkNew);
-    const onlyNew = checkboxes.querySelector("#onlyNew");
-    const dicNew = listNew.reduce((dic, key) => ({...dic, [key]: true}), {});
+    const checkIsNew = setCheckIsNew( listIsNew.length);
+    checkboxes.insertAdjacentHTML('beforeend', checkIsNew);
+    const onlyIsNew = checkboxes.querySelector("#onlyIsNew");
+    const dicIsNew = listIsNew.reduce((dic, key) => ({...dic, [key]: true}), {});
 
-    const checkBetTop = setCheckBetTop(listBetTop.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkBetTop);
-    const hideBetTop = checkboxes.querySelector("#hideBetTop");
+    const checkBet = setCheckBet(listBet.length);
+    checkboxes.insertAdjacentHTML('beforeend', checkBet);
+    const hideBet = checkboxes.querySelector("#hideBet");
 
-    const checkIsPL = setCheckIsPL(listIsPL.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkIsPL);
-    const onlyIsPL = checkboxes.querySelector("#onlyIsPL");
-    const dicIsPL = listIsPL.reduce((dic, key) => ({...dic, [key]: true}), {});
-
-    const checkBetBot = setCheckBetBot(listBetBot.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkBetBot);
-    const hideBetBot = checkboxes.querySelector("#hideBetBot");
-
-    const checkNoPL = setCheckNoPL(listNoPL.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkNoPL);
-    const onlyNoPL = checkboxes.querySelector("#onlyNoPL");
-    const dicNoPL = listNoPL.reduce((dic, key) => ({...dic, [key]: true}), {});
+    const checkVoted = setCheckVoted(listVoted.length);
+    checkboxes.insertAdjacentHTML('beforeend', checkVoted);
+    const onlyVoted = checkboxes.querySelector("#onlyVoted");
+    const dicVoted = listVoted.reduce((dic, key) => ({...dic, [key]: true}), {});
 
     const checkOld = setCheckOld(listOld.length);
     checkboxes.insertAdjacentHTML('beforeend', checkOld);
     const hideOld = checkboxes.querySelector("#hideOld");
 
-    setCheckboxOnly(onlyNew, [onlyIsPL, onlyNoPL, hideBetTop, hideBetBot, hideOld], dicNew);
-    setCheckboxOnly(onlyIsPL, [onlyNew, onlyNoPL, hideBetTop, hideBetBot, hideOld], dicIsPL);
-    setCheckboxOnly(onlyNoPL, [onlyNew, onlyIsPL, hideBetTop, hideBetBot, hideOld], dicNoPL);
+    setCheckboxOnly(onlyIsNew, [onlyVoted, hideBet], dicIsNew);
+    setCheckboxOnly(onlyVoted, [onlyIsNew, hideBet, hideOld], dicVoted);
 
-    setCheckboxHide(hideBetTop, [onlyNew, onlyIsPL, onlyNoPL], listBetTop, [hideBetBot, hideOld]);
-    setCheckboxHide(hideBetBot, [onlyNew, onlyIsPL, onlyNoPL], listBetBot, [hideBetTop, hideOld]);
-    setCheckboxHide(hideOld, [onlyNew, onlyIsPL, onlyNoPL], listOld, [hideBetTop, hideBetBot]);
+    setCheckboxHide(hideBet, [onlyIsNew, onlyVoted], listBet, [hideOld]);
+    setCheckboxHide(hideOld, [onlyIsNew, onlyVoted], listOld, [hideBet]);
 }
 
 const resetCheckboxes = () => checkboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => { checkbox.checked = false });
@@ -192,31 +184,35 @@ const addSelectors = () => {
 const resetSelectors = () => selectors.querySelectorAll('select').forEach(select => { select.value = "" });
 
 let voteList, mainList;
-let listNew, listIsPL, listNoPL, listBetTop, listBetBot, listOld;
+let listIsNew, listVoted, listBet, listOld;
 
 const addTags = (setList) => {
     voteList = document.querySelector('.vote-list')
     mainList = voteList.querySelectorAll(".list-group-item");
 
     setList.forEach((item, i) => {
-        const {lastP, change, times, isNew, weeks} = item;
+        const {lastP, change, times, isNew, weeks, votes} = item;
+        const element = mainList[i].querySelector('.vote-item');
+
         if (isNew) {
-            mainList[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagNew);
+            element.insertAdjacentHTML('beforeend', tagNew);
         } else if (lastP) {
             const tagLog = getTagChartLog(lastP, change, times, weeks);
-            mainList[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
+            element.insertAdjacentHTML('beforeend', tagLog);
         } else {
             const tagLog = getTagRestLog(weeks);
-            mainList[i].querySelector('.vote-item').insertAdjacentHTML('beforeend', tagLog);
+            element.insertAdjacentHTML('beforeend', tagLog);
+        }
+
+        if (votes) {
+            element.insertAdjacentHTML('beforeend', getTagVotes(votes));
         }
     });
 
-    listNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
-    listIsPL = setList.reduce((list, item, i) => item.isPL ? [...list, i] : list, []);
-    listNoPL = setList.reduce((list, item, i) => !item.isPL ? [...list, i] : list, []);
+    listIsNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
+    listVoted = setList.reduce((list, item, i) => item.votes ? [...list, i] : list, []);
 
-    listBetTop = setList.reduce((list, item, i) => item.isBetTop ? [...list, i] : list, []);
-    listBetBot = setList.reduce((list, item, i) => item.isBetBot ? [...list, i] : list, []);
+    listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
     listOld = setList.reduce((list, item, i) => item.isOld ? [...list, i] : list, []);
 
     setList.forEach((item, i) => { persons[item.addBy || "xx"].list.push(i) });
@@ -266,13 +262,51 @@ const addRemovedList = () => {
     });
 }
 
+const getVotes = (listNo, setList) => {
+    const myVotes = {};
+
+    for (var i = 1; i < listNo+1; i++) {
+        const votes = JSON.parse(localStorage.getItem("myVotes" + i));
+        const last = (i == listNo);
+
+        if (votes) {
+            votes.forEach(id => {
+                if (myVotes[id]) {
+                    myVotes[id].count++;
+                } else {
+                    myVotes[id] = { count: 1 };
+                }
+                if (last) {
+                    myVotes[id].last = true;
+                }
+            });
+        }
+    }
+
+    setList.forEach(item => { item.votes = myVotes[item.id] });
+}
+
+const setVotes = (listNo) => {
+    const voteButton = document.querySelector('.vote__content button');
+    if (voteButton) {
+        voteButton.addEventListener('click', (e) => {
+            const voteList = document.querySelector('.vote-list');
+            const votedItems = [...voteList.querySelectorAll('.vote-item input:checked')];
+            const votedList = votedItems.map(elem => +elem.value);
+
+            localStorage.setItem("myVotes" + listNo, JSON.stringify(votedList));
+        });
+    }
+}
+
 (function() {
     showScroll(false);
 
     getList(urlSettingsList).then(setList => {
         const setCounter = setList.length;
 
-        let voteList, loadbar, loading, progress;
+        let voteList, listNo;
+        let loadbar, loading, progress;
         let items = [];
         let itemsCounter = 0;
 
@@ -280,6 +314,10 @@ const addRemovedList = () => {
             if (!voteList) {
                 voteList = document.querySelector('.vote-list');
                 toggleVisibility(voteList);
+
+                listNo = document.querySelector('.header__heading-voting').innerText.split('#')[1];
+                getVotes(listNo, setList);
+                setVotes(listNo);
 
                 voteList.insertAdjacentHTML('beforebegin', `<div id="loadbar"><div id="loading">Zaczytywanie danych...</div></div>`);
                 loading = voteList.parentElement.querySelector("#loading");
