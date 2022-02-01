@@ -301,11 +301,6 @@ const setVotes = (listNo) => {
 
             localStorage.setItem("myVotes" + listNo, JSON.stringify(votedList));
         });
-
-        voteContent.addEventListener('DOMSubtreeModified', (e) => {
-            const voteButton = voteContent.querySelectorAll('button');
-            console.log(voteButton);
-        });
     }
 }
 
