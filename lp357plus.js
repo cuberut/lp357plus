@@ -1,6 +1,6 @@
- // ==UserScript==
+// ==UserScript==
 // @name       LP357+
-// @version    0.9.9
+// @version    0.9.10
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -206,6 +206,7 @@ const addTags = (setList) => {
 
         if (votes) {
             element.insertAdjacentHTML('beforeend', getTagVotes(votes));
+            element.querySelector('input')?.click();
         }
     });
 
@@ -287,14 +288,23 @@ const getVotes = (listNo, setList) => {
 }
 
 const setVotes = (listNo) => {
-    const voteButton = document.querySelector('.vote__content button');
-    if (voteButton) {
+    const voteContent = document.querySelector('.vote__content');
+
+    if (voteContent) {
+        const voteButton = voteContent.querySelector('button');
         voteButton.addEventListener('click', (e) => {
+            extraTools.hidden = true;
+
             const voteList = document.querySelector('.vote-list');
             const votedItems = [...voteList.querySelectorAll('.vote-item input:checked')];
             const votedList = votedItems.map(elem => +elem.value);
 
             localStorage.setItem("myVotes" + listNo, JSON.stringify(votedList));
+        });
+
+        voteContent.addEventListener('DOMSubtreeModified', (e) => {
+            const voteButton = voteContent.querySelectorAll('button');
+            console.log(voteButton);
         });
     }
 }
@@ -313,6 +323,9 @@ const setVotes = (listNo) => {
         const interval = setInterval(() => {
             if (!voteList) {
                 voteList = document.querySelector('.vote-list');
+            }
+
+            if (voteList && !loading) {
                 toggleVisibility(voteList);
 
                 listNo = document.querySelector('.header__heading-voting').innerText.split('#')[1];
@@ -323,23 +336,25 @@ const setVotes = (listNo) => {
                 loading = voteList.parentElement.querySelector("#loading");
             }
 
-            let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
+            if (loading) {
+                let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
 
-            if (itemsCounter < setCounter) {
-                visible.forEach(item => { item.hidden = true });
-                itemsCounter += visible.length;
-                items = [...items, ...visible];
-                progress = (itemsCounter/setCounter) * 100;
-                loading.style.width = progress + '%';
-            } else {
-                loading.hidden = true;
-                setSearch(voteList, items);
-                clearInterval(interval);
-                items.forEach(item => { item.hidden = false });
-                showScroll(true);
-                addTags(setList);
-                toggleVisibility(voteList);
-                addRemovedList();
+                if (itemsCounter < setCounter) {
+                    visible.forEach(item => { item.hidden = true });
+                    itemsCounter += visible.length;
+                    items = [...items, ...visible];
+                    progress = (itemsCounter/setCounter) * 100;
+                    loading.style.width = progress + '%';
+                } else {
+                    loading.hidden = true;
+                    setSearch(voteList, items);
+                    clearInterval(interval);
+                    items.forEach(item => { item.hidden = false });
+                    showScroll(true);
+                    addTags(setList);
+                    toggleVisibility(voteList);
+                    addRemovedList();
+                }
             }
         }, 500);
     });
