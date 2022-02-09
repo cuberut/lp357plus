@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.11
+// @version    0.9.12
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -14,6 +14,7 @@ GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-rig
 GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
+GM_addStyle("div#votedList ol { font-size: small; padding-left: 1em; }");
 
 const urlApi = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/';
 const urlSettingsList = urlApi + 'settingsList';
@@ -112,7 +113,7 @@ const addCheckboxes = () => {
     extraTools.insertAdjacentHTML('beforeend', `<p id="checkboxes"></p>`);
     checkboxes = voteList.querySelector("#checkboxes");
 
-    const checkIsNew = setCheckIsNew( listIsNew.length);
+    const checkIsNew = setCheckIsNew(listIsNew.length);
     checkboxes.insertAdjacentHTML('beforeend', checkIsNew);
     const onlyIsNew = checkboxes.querySelector("#onlyIsNew");
     const dicIsNew = listIsNew.reduce((dic, key) => ({...dic, [key]: true}), {});
@@ -307,6 +308,25 @@ const setVotes = (listNo) => {
     }
 }
 
+const setVoteSection = () => {
+    const voteSection = document.querySelector('.layout__action');
+
+    if (voteSection) {
+
+        voteSection.insertAdjacentHTML('beforeend', `<div id="votedList"><ol></ol></div>`);
+        const votedList = voteSection.querySelector('#votedList ol');
+
+        const voteCounter = voteSection.querySelector('.vote__votes');
+        voteCounter.addEventListener("DOMSubtreeModified", function (e) {
+            const items = voteList.querySelectorAll('.vote-list input:checked')
+            const list = [...items].reduce((list, item) => `${list}<li>${item.parentElement.lastChild.innerText.replace("\n", " - ")}</li>`, "");
+
+            votedList.textContent = null
+            votedList.insertAdjacentHTML('beforeend', list);
+        }, false);
+    }
+}
+
 (function() {
     showScroll(false);
 
@@ -350,6 +370,7 @@ const setVotes = (listNo) => {
                     items.forEach(item => { item.hidden = false });
                     showScroll(true);
                     addTags(setList);
+                    setVoteSection();
                     toggleVisibility(voteList);
                     addRemovedList();
                 }
