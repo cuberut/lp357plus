@@ -14,7 +14,7 @@ GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-rig
 GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
-GM_addStyle("div#votedList ol { font-size: small; padding-left: 1em; }");
+GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
 
 const urlApi = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/';
 const urlSettingsList = urlApi + 'settingsList';
