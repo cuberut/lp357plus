@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.12
+// @version    0.9.13
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -15,6 +15,7 @@ GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
 GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
+GM_addStyle("div#votedList ol li:hover { text-decoration: line-through; cursor: pointer; }");
 
 const urlApi = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/';
 const urlSettingsList = urlApi + 'settingsList';
@@ -317,12 +318,25 @@ const setVoteSection = () => {
         const votedList = voteSection.querySelector('#votedList ol');
 
         const voteCounter = voteSection.querySelector('.vote__votes');
-        voteCounter.addEventListener("DOMSubtreeModified", function (e) {
+        voteCounter.addEventListener("DOMSubtreeModified", (e) => {
             const items = voteList.querySelectorAll('.vote-list input:checked')
-            const list = [...items].reduce((list, item) => `${list}<li>${item.parentElement.lastChild.innerText.replace("\n", " - ")}</li>`, "");
+            const list = [...items].reduce((list, item) => {
+                const id = item.id;
+                const song = item.parentElement.lastChild.innerText.replace("\n", " - ");
+                return `${list}<li for="${id}">${song}</li>`;
+            }, "");
 
             votedList.textContent = null
             votedList.insertAdjacentHTML('beforeend', list);
+
+            const votedItems = [...voteSection.querySelectorAll('li')];
+            votedItems.forEach(li => {
+                li.addEventListener("click", (e) => {
+                    const forId = e.target.getAttribute("for");
+                    const input = voteList.querySelector(`#${forId}`);
+                    input.click();
+                });
+            });
         }, false);
     }
 }
