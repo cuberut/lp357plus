@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.13
+// @version    0.9.14
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -132,7 +132,7 @@ const addCheckboxes = () => {
     checkboxes.insertAdjacentHTML('beforeend', checkOld);
     const hideOld = checkboxes.querySelector("#hideOld");
 
-    setCheckboxOnly(onlyIsNew, [onlyVoted, hideBet], dicIsNew);
+    setCheckboxOnly(onlyIsNew, [onlyVoted, hideBet, hideOld], dicIsNew);
     setCheckboxOnly(onlyVoted, [onlyIsNew, hideBet, hideOld], dicVoted);
 
     setCheckboxHide(hideBet, [onlyIsNew, onlyVoted], listBet, [hideOld]);
