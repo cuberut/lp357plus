@@ -319,7 +319,7 @@ const setVoteSection = () => {
 
         const voteCounter = voteSection.querySelector('.vote__votes');
         voteCounter.addEventListener("DOMSubtreeModified", (e) => {
-            const items = voteList.querySelectorAll('.vote-list input:checked')
+            const items = voteList.querySelectorAll('.list-group input:checked')
             const list = [...items].reduce((list, item) => {
                 const id = item.id;
                 const song = item.parentElement.lastChild.innerText.replace("\n", " - ");
