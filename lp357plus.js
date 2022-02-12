@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       LP357+
-// @version    0.9.14
+// @version    0.9.15
 // @author     cuberut
 // @include    https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -313,14 +313,13 @@ const setVoteSection = () => {
     const voteSection = document.querySelector('.layout__action');
 
     if (voteSection) {
-
         voteSection.insertAdjacentHTML('beforeend', `<div id="votedList"><ol></ol></div>`);
         const votedList = voteSection.querySelector('#votedList ol');
 
         const voteCounter = voteSection.querySelector('.vote__votes');
         voteCounter.addEventListener("DOMSubtreeModified", (e) => {
-            const items = voteList.querySelectorAll('.list-group input:checked')
-            const list = [...items].reduce((list, item) => {
+            const checkedItems = voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked')
+            const list = [...checkedItems].reduce((list, item) => {
                 const id = item.id;
                 const song = item.parentElement.lastChild.innerText.replace("\n", " - ");
                 return `${list}<li for="${id}">${song}</li>`;
