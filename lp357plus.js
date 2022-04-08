@@ -1,10 +1,12 @@
 // ==UserScript==
-// @name       LP357+
-// @version    0.9.15
-// @author     cuberut
-// @include    https://lista.radio357.pl/app/lista/glosowanie
-// @updateURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
-// @grant      GM_addStyle
+// @name         LP357+
+// @version      0.9.16
+// @author       cuberut
+// @description  Wspomaganie głosowania na LP357
+// @include      https://lista.radio357.pl/app/lista/glosowanie
+// @updateURL    https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
+// @downloadURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
+// @grant        GM_addStyle
 // ==/UserScript==
 
 GM_addStyle("div#loadbar { width: 100%; background-color: #ddd;}");
@@ -350,6 +352,7 @@ const setVoteSection = () => {
         let loadbar, loading, progress;
         let items = [];
         let itemsCounter = 0;
+        let ids = {};
 
         const interval = setInterval(() => {
             if (!voteList) {
@@ -370,24 +373,35 @@ const setVoteSection = () => {
             if (loading) {
                 let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
 
-                if (itemsCounter < setCounter) {
-                    visible.forEach(item => { item.hidden = true });
-                    itemsCounter += visible.length;
+                if (visible.length || itemsCounter == setCounter) {
+                    setTimeout(function(){
+                        visible.forEach(item => {
+                            item.hidden = true;
+
+                            if (!item.counted) {
+                                itemsCounter++;
+                                item.counted = true;
+                            }
+                        });
+                    }, 0);
+
                     items = [...items, ...visible];
                     progress = (itemsCounter/setCounter) * 100;
                     loading.style.width = progress + '%';
-                } else {
-                    loading.hidden = true;
-                    setSearch(voteList, items);
-                    clearInterval(interval);
-                    items.forEach(item => { item.hidden = false });
-                    showScroll(true);
-                    addTags(setList);
-                    setVoteSection();
-                    toggleVisibility(voteList);
-                    addRemovedList();
+
+                    if (itemsCounter == setCounter) {
+                        loading.hidden = true;
+                        setSearch(voteList, items);
+                        clearInterval(interval);
+                        items.forEach(item => { item.hidden = false });
+                        showScroll(true);
+                        addTags(setList);
+                        setVoteSection();
+                        toggleVisibility(voteList);
+                        addRemovedList();
+                    }
                 }
             }
-        }, 500);
+        }, 25);
     });
 })();
