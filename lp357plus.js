@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      0.9.16
+// @version      0.9.17
 // @author       cuberut
 // @description  Wspomaganie głosowania na LP357
 // @include      https://lista.radio357.pl/app/lista/glosowanie
@@ -36,6 +36,9 @@ const setCheckVoted = (amount) => `<label class="form-check-label"><input id="on
 
 const setCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox" ${amount || 'disabled'}><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 const setCheckOld = (amount) => `<label class="form-check-label"><input id="hideOld" type="checkbox" ${amount || 'disabled'}><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+
+const setCheckOrderByNewest = () => `<label class="form-check-label"><input id="orderByNewest" type="checkbox">Sortuj wg najmłodszych stażem</label>`;
+const setCheckOrderByOldest = () => `<label class="form-check-label"><input id="orderByOldest" type="checkbox">Sortuj wg najstarszych stażem</label>`;
 
 const setSelectAddBy = () => `<label class="form-check-label">Pokaż tylko utwory zgłoszone przez:</label><select id="chooseAddBy"></select>`;
 
@@ -112,7 +115,7 @@ const setCheckboxHide = (element, rest, list, others) => {
 
 let checkboxes;
 
-const addCheckboxes = () => {
+const addCheckboxes = (setList) => {
     extraTools.insertAdjacentHTML('beforeend', `<p id="checkboxes"></p>`);
     checkboxes = voteList.querySelector("#checkboxes");
 
@@ -142,6 +145,40 @@ const addCheckboxes = () => {
 }
 
 const resetCheckboxes = () => checkboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => { checkbox.checked = false });
+
+const setOrder = (element, rest, dic, orgin) => {
+    element.onclick = (e) => {
+        const checked = e.target.checked;
+
+        if (checked) {
+            dic.forEach(index => { listGroup.append(itemList[index])});
+            rest.forEach(x => { x.checked = false });
+        } else {
+            orgin.forEach(index => { listGroup.append(itemList[index])});
+        }
+    }
+}
+
+let orderboxes;
+
+const addOrderboxes = (setList) => {
+    extraTools.insertAdjacentHTML('beforeend', `<p id="orderboxes"></p>`);
+    orderboxes = voteList.querySelector("#orderboxes");
+
+    const orderList = [...setList].map((item, i) => ({ no: i, age: +item.weeks }));
+    const orginList = orderList.map(item => item.no);
+
+    orderboxes.insertAdjacentHTML('beforeend', setCheckOrderByNewest());
+    const orderByNewest = orderboxes.querySelector("#orderByNewest");
+    const dicByNewest = orderList.sort((a, b) => (a.age < b.age) ? -1 : 1).map(item => item.no);
+
+    orderboxes.insertAdjacentHTML('beforeend', setCheckOrderByOldest());
+    const orderByOldest = orderboxes.querySelector("#orderByOldest");
+    const dicByOldest = orderList.sort((a, b) => (a.age > b.age) ? -1 : 1).map(item => item.no);
+
+    setOrder(orderByNewest, [orderByOldest], dicByNewest, orginList);
+    setOrder(orderByOldest, [orderByNewest], dicByOldest, orginList);
+}
 
 const persons = {
     "PD": {list:[], name: "PIOSENKA DNIA"},
@@ -187,12 +224,14 @@ const addSelectors = () => {
 
 const resetSelectors = () => selectors.querySelectorAll('select').forEach(select => { select.value = "" });
 
-let voteList, mainList;
+let voteList, listGroup, mainList, itemList;
 let listIsNew, listVoted, listBet, listOld;
 
 const addTags = (setList) => {
-    voteList = document.querySelector('.vote-list')
+    voteList = document.querySelector('.vote-list');
+    listGroup = voteList.querySelector('ul.list-group');
     mainList = voteList.querySelectorAll(".list-group-item");
+    itemList = [...mainList];
 
     setList.forEach((item, i) => {
         const {lastP, change, times, isNew, weeks, votes} = item;
@@ -228,6 +267,7 @@ const addTags = (setList) => {
 
     addInfoStatus();
     addCheckboxes();
+    addOrderboxes(setList);
     addSelectors();
 }
 
@@ -352,7 +392,6 @@ const setVoteSection = () => {
         let loadbar, loading, progress;
         let items = [];
         let itemsCounter = 0;
-        let ids = {};
 
         const interval = setInterval(() => {
             if (!voteList) {
