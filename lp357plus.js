@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         LP357+
-// @version      0.9.17
+// @version      0.9.18
 // @author       cuberut
-// @description  Wspomaganie głosowania na LP357
+// @description  Wspomaganie głosowania LP357
 // @include      https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL    https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @downloadURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
@@ -19,6 +19,8 @@ GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align
 GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
 GM_addStyle("div#votedList ol li:hover { text-decoration: line-through; cursor: pointer; }");
 
+//-----------------------------------------------
+
 const urlApi = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/';
 const urlSettingsList = urlApi + 'settingsList';
 const urlRemovedList = urlApi + 'removedList';
@@ -29,9 +31,12 @@ const getList = async (url) => {
     return await myJson;
 }
 
+//-----------------------------------------------
+
 const setInfoStatus = (amount) => `<p id="infoStatus">Liczba widocznych utworów: <strong><span id="infoVisible">${amount}</span>/<span>${amount}</span></strong> (<span id="infoPercent">100</span>%)`;
 
 const setCheckIsNew = (amount) => `<label class="form-check-label"><input id="onlyIsNew" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
+const setCheckAwait = (amount) => `<label class="form-check-label"><input id="onlyAwait" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko oczekujące - ${amount} pozycji</span></label>`;
 const setCheckVoted = (amount) => `<label class="form-check-label"><input id="onlyVoted" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko moje typy - ${amount} pozycji</span></label>`;
 
 const setCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox" ${amount || 'disabled'}><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
@@ -40,12 +45,18 @@ const setCheckOld = (amount) => `<label class="form-check-label"><input id="hide
 const setCheckOrderByNewest = () => `<label class="form-check-label"><input id="orderByNewest" type="checkbox">Sortuj wg najmłodszych stażem</label>`;
 const setCheckOrderByOldest = () => `<label class="form-check-label"><input id="orderByOldest" type="checkbox">Sortuj wg najstarszych stażem</label>`;
 
+const setCheckOrderByLastPA = () => `<label class="form-check-label"><input id="orderByLastPA" type="checkbox">Sortuj wg ostatniej pozycji rosnąco</label>`;
+const setCheckOrderByLastPD = () => `<label class="form-check-label"><input id="orderByLastPD" type="checkbox">Sortuj wg ostatenij pozycji malejąco</label>`;
+
 const setSelectAddBy = () => `<label class="form-check-label">Pokaż tylko utwory zgłoszone przez:</label><select id="chooseAddBy"></select>`;
 
 const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
 
 const getTagChartLog = (lastP, change, times, weeks) => {
-    return `<div class="chart-item__info tagLog"><span>ostatnia poz.: ${lastP} (${change})</span><br/><span>notowanie: ${times} tydzień</span><br/><span>propozycje: ${weeks} tydzień</span></div>`
+    const ranksPart = `<span>ostatnia poz.: ${lastP}` + (change ? ` (${change})` : '') + '</span>';
+    const timesPart = times ? `<span>notowanie: (${times}) tydzień</span>` : '';
+    const weeksPart = weeks ? `<span>propozycje: ${weeks} tydzień</span>` : '';
+    return `<div class="chart-item__info tagLog">${ranksPart}<br/>${timesPart}<br/>${weeksPart}</div>`
 };
 
 const getTagRestLog = (weeks) => {
@@ -55,6 +66,8 @@ const getTagRestLog = (weeks) => {
 const getTagVotes = (item) => {
     return `<div id="votes"><i class="${item.last ? 'fas' : 'far'} fa-star"></i><div class="small">(${item.count})</div></div>`
 };
+
+//-----------------------------------------------
 
 let extraTools, amountAll, infoVisible, infoPercent;
 
@@ -84,6 +97,8 @@ const changeInfoStatus = () => {
         infoPercent.innerText = amountPercent.toFixed(0);
     }
 }
+
+//-----------------------------------------------
 
 const setCheckboxOnly = (element, rest, dic) => {
     element.onclick = (e) => {
@@ -128,25 +143,33 @@ const addCheckboxes = (setList) => {
     checkboxes.insertAdjacentHTML('beforeend', checkBet);
     const hideBet = checkboxes.querySelector("#hideBet");
 
-    const checkVoted = setCheckVoted(listVoted.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkVoted);
-    const onlyVoted = checkboxes.querySelector("#onlyVoted");
-    const dicVoted = listVoted.reduce((dic, key) => ({...dic, [key]: true}), {});
+    const checkAwait = setCheckAwait(listAwait.length);
+    checkboxes.insertAdjacentHTML('beforeend', checkAwait);
+    const onlyAwait = checkboxes.querySelector("#onlyAwait");
+    const dicAwait = listAwait.reduce((dic, key) => ({...dic, [key]: true}), {});
 
     const checkOld = setCheckOld(listOld.length);
     checkboxes.insertAdjacentHTML('beforeend', checkOld);
     const hideOld = checkboxes.querySelector("#hideOld");
 
-    setCheckboxOnly(onlyIsNew, [onlyVoted, hideBet, hideOld], dicIsNew);
-    setCheckboxOnly(onlyVoted, [onlyIsNew, hideBet, hideOld], dicVoted);
+    const checkVoted = setCheckVoted(listVoted.length);
+    checkboxes.insertAdjacentHTML('beforeend', checkVoted);
+    const onlyVoted = checkboxes.querySelector("#onlyVoted");
+    const dicVoted = listVoted.reduce((dic, key) => ({...dic, [key]: true}), {});
 
-    setCheckboxHide(hideBet, [onlyIsNew, onlyVoted], listBet, [hideOld]);
-    setCheckboxHide(hideOld, [onlyIsNew, onlyVoted], listOld, [hideBet]);
+    setCheckboxOnly(onlyIsNew, [onlyAwait, onlyVoted, hideBet, hideOld], dicIsNew);
+    setCheckboxOnly(onlyAwait, [onlyIsNew, onlyVoted, hideBet, hideOld], dicAwait);
+    setCheckboxOnly(onlyVoted, [onlyAwait, onlyIsNew, hideBet, hideOld], dicVoted);
+
+    setCheckboxHide(hideBet, [onlyIsNew, onlyAwait, onlyVoted], listBet, [hideOld]);
+    setCheckboxHide(hideOld, [onlyIsNew, onlyAwait, onlyVoted], listOld, [hideBet]);
 }
 
 const resetCheckboxes = () => checkboxes.querySelectorAll('input[type="checkbox"]').forEach(checkbox => { checkbox.checked = false });
 
-const setOrder = (element, rest, dic, orgin) => {
+//-----------------------------------------------
+
+const setOrder = (element, rest, dic, origin) => {
     element.onclick = (e) => {
         const checked = e.target.checked;
 
@@ -154,7 +177,7 @@ const setOrder = (element, rest, dic, orgin) => {
             dic.forEach(index => { listGroup.append(itemList[index])});
             rest.forEach(x => { x.checked = false });
         } else {
-            orgin.forEach(index => { listGroup.append(itemList[index])});
+            origin.forEach(index => { listGroup.append(itemList[index])});
         }
     }
 }
@@ -165,20 +188,33 @@ const addOrderboxes = (setList) => {
     extraTools.insertAdjacentHTML('beforeend', `<p id="orderboxes"></p>`);
     orderboxes = voteList.querySelector("#orderboxes");
 
-    const orderList = [...setList].map((item, i) => ({ no: i, age: +item.weeks }));
-    const orginList = orderList.map(item => item.no);
+    const orderList = [...setList].map((item, i) => ({ no: i, age: +item.weeks, lastP: item.lastP ? +item.lastP : 0 }));
+    const originList = orderList.map(item => item.no);
 
     orderboxes.insertAdjacentHTML('beforeend', setCheckOrderByNewest());
     const orderByNewest = orderboxes.querySelector("#orderByNewest");
     const dicByNewest = orderList.sort((a, b) => (a.age < b.age) ? -1 : 1).map(item => item.no);
 
+    orderboxes.insertAdjacentHTML('beforeend', setCheckOrderByLastPA());
+    const orderByLastPA = orderboxes.querySelector("#orderByLastPA");
+    const dicByLastPA = orderList.sort((a, b) => (a.lastP > b.lastP) ? 1 : -1).map(item => item.no);
+
     orderboxes.insertAdjacentHTML('beforeend', setCheckOrderByOldest());
     const orderByOldest = orderboxes.querySelector("#orderByOldest");
     const dicByOldest = orderList.sort((a, b) => (a.age > b.age) ? -1 : 1).map(item => item.no);
 
-    setOrder(orderByNewest, [orderByOldest], dicByNewest, orginList);
-    setOrder(orderByOldest, [orderByNewest], dicByOldest, orginList);
+    orderboxes.insertAdjacentHTML('beforeend', setCheckOrderByLastPD());
+    const orderByLastPD = orderboxes.querySelector("#orderByLastPD");
+    const dicByLastPD = orderList.sort((a, b) => (a.lastP > b.lastP) ? -1 : 1).map(item => item.no);
+
+    setOrder(orderByNewest, [orderByOldest, orderByLastPA, orderByLastPD], dicByNewest, originList);
+    setOrder(orderByOldest, [orderByNewest, orderByLastPA, orderByLastPD], dicByOldest, originList);
+
+    setOrder(orderByLastPA, [orderByOldest, orderByNewest, orderByLastPD], dicByLastPA, originList);
+    setOrder(orderByLastPD, [orderByOldest, orderByNewest, orderByLastPA], dicByLastPD, originList);
 }
+
+//-----------------------------------------------
 
 const persons = {
     "PD": {list:[], name: "PIOSENKA DNIA"},
@@ -224,8 +260,10 @@ const addSelectors = () => {
 
 const resetSelectors = () => selectors.querySelectorAll('select').forEach(select => { select.value = "" });
 
+//-----------------------------------------------
+
 let voteList, listGroup, mainList, itemList;
-let listIsNew, listVoted, listBet, listOld;
+let listIsNew, listAwait, listVoted, listBet, listOld;
 
 const addTags = (setList) => {
     voteList = document.querySelector('.vote-list');
@@ -257,6 +295,7 @@ const addTags = (setList) => {
     });
 
     listIsNew = setList.reduce((list, item, i) => item.isNew ? [...list, i] : list, []);
+    listAwait = setList.reduce((list, item, i) => item.lastP > 35 ? [...list, i] : list, []);
     listVoted = setList.reduce((list, item, i) => item.votes ? [...list, i] : list, []);
 
     listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
@@ -270,6 +309,8 @@ const addTags = (setList) => {
     addOrderboxes(setList);
     addSelectors();
 }
+
+//-----------------------------------------------
 
 const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 'hidden' }
 const toggleVisibility = (element) => { element.style.opacity = (element.style.opacity === '') ? 0 : '' }
@@ -294,6 +335,7 @@ const setSearch = (voteList, items) => {
         listElement.map(item => {
             item.element.hidden = !(item.author.includes(value) || item.title.includes(value));
         });
+        changeInfoStatus();
     });
 }
 
@@ -309,6 +351,8 @@ const addRemovedList = () => {
         removed.innerText = removedString;
     });
 }
+
+//-----------------------------------------------
 
 const getVotes = (listNo, setList) => {
     const myVotes = {};
@@ -381,6 +425,8 @@ const setVoteSection = () => {
         }, false);
     }
 }
+
+//-----------------------------------------------
 
 (function() {
     showScroll(false);
