@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         LP357+
-// @version      0.9.18
+// @version      0.9.19
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
-// @include      https://lista.radio357.pl/app/lista/glosowanie
+// @match        https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL    https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @downloadURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @grant        GM_addStyle
@@ -11,7 +11,6 @@
 
 GM_addStyle("div#loadbar { width: 100%; background-color: #ddd;}");
 GM_addStyle("div#loading { width: 0%; height: 2rem; background-color: #337AB7; padding: 0.25rem 0.5rem; }");
-GM_addStyle("div.tagNew { position: absolute; right: 0; margin-right: 100px; }");
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
 GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
@@ -50,11 +49,9 @@ const setCheckOrderByLastPD = () => `<label class="form-check-label"><input id="
 
 const setSelectAddBy = () => `<label class="form-check-label">Pokaż tylko utwory zgłoszone przez:</label><select id="chooseAddBy"></select>`;
 
-const tagNew = '<div class="badge badge-primary tagNew">Nowość!</div>';
-
 const getTagChartLog = (lastP, change, times, weeks) => {
     const ranksPart = `<span>ostatnia poz.: ${lastP}` + (change ? ` (${change})` : '') + '</span>';
-    const timesPart = times ? `<span>notowanie: (${times}) tydzień</span>` : '';
+    const timesPart = times ? `<span>notowanie: ${times} tydzień</span>` : '';
     const weeksPart = weeks ? `<span>propozycje: ${weeks} tydzień</span>` : '';
     return `<div class="chart-item__info tagLog">${ranksPart}<br/>${timesPart}<br/>${weeksPart}</div>`
 };
@@ -275,9 +272,7 @@ const addTags = (setList) => {
         const {lastP, change, times, isNew, weeks, votes} = item;
         const element = mainList[i].querySelector('.vote-item');
 
-        if (isNew) {
-            element.insertAdjacentHTML('beforeend', tagNew);
-        } else if (lastP) {
+        if (lastP) {
             const tagLog = getTagChartLog(lastP, change, times, weeks);
             element.insertAdjacentHTML('beforeend', tagLog);
         } else {
