@@ -1,13 +1,20 @@
 // ==UserScript==
 // @name         LP357+
-// @version      0.9.19
+// @version      1.1.0
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://lista.radio357.pl/app/lista/glosowanie
 // @updateURL    https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @downloadURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
+// @require      https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.js
+// @resource     REMOTE_CSS https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.css
 // @grant        GM_addStyle
+// @grant        GM_getResourceText
 // ==/UserScript==
+
+const myCss = GM_getResourceText("REMOTE_CSS");
+GM_addStyle(myCss);
+GM_addStyle("div.ct-chart { visibility: hidden; position: absolute; right: -700px; top: -60px}");
 
 GM_addStyle("div#loadbar { width: 100%; background-color: #ddd;}");
 GM_addStyle("div#loading { width: 0%; height: 2rem; background-color: #337AB7; padding: 0.25rem 0.5rem; }");
@@ -262,14 +269,14 @@ const resetSelectors = () => selectors.querySelectorAll('select').forEach(select
 let voteList, listGroup, mainList, itemList;
 let listIsNew, listAwait, listVoted, listBet, listOld;
 
-const addTags = (setList) => {
+const addTags = (listNo, setList) => {
     voteList = document.querySelector('.vote-list');
     listGroup = voteList.querySelector('ul.list-group');
     mainList = voteList.querySelectorAll(".list-group-item");
     itemList = [...mainList];
 
     setList.forEach((item, i) => {
-        const {lastP, change, times, isNew, weeks, votes} = item;
+        const {lastP, change, times, isNew, weeks, votes, history} = item;
         const element = mainList[i].querySelector('.vote-item');
 
         if (lastP) {
@@ -278,6 +285,29 @@ const addTags = (setList) => {
         } else {
             const tagLog = getTagRestLog(weeks);
             element.insertAdjacentHTML('beforeend', tagLog);
+        }
+
+        if (history) {
+            mainList[i].insertAdjacentHTML('afterbegin', `<div class="ct-chart"></div>`);
+            const chart = mainList[i].querySelector(`.ct-chart`);
+            mainList[i].addEventListener('mouseover', (e) => { chart.style.visibility = 'visible' });
+            mainList[i].addEventListener('mouseout', (e) => { chart.style.visibility = 'hidden' });
+
+            const labels = [...Array(10).keys()].map(x => (x + listNo - 10));
+            const series = history.split(",").map(x => x || null);
+
+            new window.Chartist.Line(chart, {
+                labels: labels,
+                series: [ series ],
+                ticks: [1, 10, 20, 30]
+            }, {
+                fullWidth: false,
+                height: '200px',
+                width: '700px',
+                color: 'black',
+                fillHoles: false,
+                onlyInteger: true,
+            });
         }
 
         if (votes) {
@@ -442,7 +472,7 @@ const setVoteSection = () => {
             if (voteList && !loading) {
                 toggleVisibility(voteList);
 
-                listNo = document.querySelector('.header__heading-voting').innerText.split('#')[1];
+                listNo = +document.querySelector('.header__heading-voting').innerText.split('#')[1];
                 getVotes(listNo, setList);
                 setVotes(listNo);
 
@@ -475,7 +505,7 @@ const setVoteSection = () => {
                         clearInterval(interval);
                         items.forEach(item => { item.hidden = false });
                         showScroll(true);
-                        addTags(setList);
+                        addTags(listNo, setList);
                         setVoteSection();
                         toggleVisibility(voteList);
                         addRemovedList();
