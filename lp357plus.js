@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.1.0
+// @version      1.1.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://lista.radio357.pl/app/lista/glosowanie
@@ -294,19 +294,21 @@ const addTags = (listNo, setList) => {
             mainList[i].addEventListener('mouseout', (e) => { chart.style.visibility = 'hidden' });
 
             const labels = [...Array(10).keys()].map(x => (x + listNo - 10));
-            const series = history.split(",").map(x => x || null);
+            const series = history.split(",").map(x => -x || null);
 
             new window.Chartist.Line(chart, {
                 labels: labels,
-                series: [ series ],
-                ticks: [1, 10, 20, 30]
+                series: [ series ]
             }, {
                 fullWidth: false,
                 height: '200px',
                 width: '700px',
                 color: 'black',
                 fillHoles: false,
-                onlyInteger: true,
+                axisY: {
+                    onlyInteger: true,
+                    labelInterpolationFnc: value => -value
+                }
             });
         }
 
