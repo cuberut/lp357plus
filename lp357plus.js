@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.1.1
+// @version      1.1.2
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://lista.radio357.pl/app/lista/glosowanie
@@ -275,6 +275,10 @@ const addTags = (listNo, setList) => {
     mainList = voteList.querySelectorAll(".list-group-item");
     itemList = [...mainList];
 
+    const layoutRight = document.querySelector('div[slug="lista"] .layout__right-column .layout__photo');
+    layoutRight.style.right = "auto";
+    const layoutPhoto = layoutRight.querySelector('div');
+
     setList.forEach((item, i) => {
         const {lastP, change, times, isNew, weeks, votes, history} = item;
         const element = mainList[i].querySelector('.vote-item');
@@ -288,10 +292,10 @@ const addTags = (listNo, setList) => {
         }
 
         if (history) {
-            mainList[i].insertAdjacentHTML('afterbegin', `<div class="ct-chart"></div>`);
-            const chart = mainList[i].querySelector(`.ct-chart`);
-            mainList[i].addEventListener('mouseover', (e) => { chart.style.visibility = 'visible' });
-            mainList[i].addEventListener('mouseout', (e) => { chart.style.visibility = 'hidden' });
+            layoutRight.insertAdjacentHTML('afterbegin', `<div class="ct-chart-${i}" hidden></div>`);
+            const chart = layoutRight.querySelector(`.ct-chart-${i}`);
+            mainList[i].addEventListener('mouseover', (e) => { chart.hidden = false; layoutPhoto.hidden = true });
+            mainList[i].addEventListener('mouseout', (e) => { chart.hidden = true; layoutPhoto.hidden = false });
 
             const labels = [...Array(10).keys()].map(x => (x + listNo - 10));
             const series = history.split(",").map(x => -x || null);
@@ -301,11 +305,13 @@ const addTags = (listNo, setList) => {
                 series: [ series ]
             }, {
                 fullWidth: false,
-                height: '200px',
-                width: '700px',
+                height: '500px',
+                width: '550px',
                 color: 'black',
                 fillHoles: false,
                 axisY: {
+                    low: -50,
+                    high: -1,
                     onlyInteger: true,
                     labelInterpolationFnc: value => -value
                 }
