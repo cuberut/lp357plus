@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.1.2
+// @version      1.2
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://lista.radio357.pl/app/lista/glosowanie
@@ -14,7 +14,7 @@
 
 const myCss = GM_getResourceText("REMOTE_CSS");
 GM_addStyle(myCss);
-GM_addStyle("div.ct-chart { visibility: hidden; position: absolute; right: -700px; top: -60px}");
+GM_addStyle("div.ct-chart g.ct-grids line[y1='330'] { stroke-dasharray: 8; stroke-width: 2; }");
 
 GM_addStyle("div#loadbar { width: 100%; background-color: #ddd;}");
 GM_addStyle("div#loading { width: 0%; height: 2rem; background-color: #337AB7; padding: 0.25rem 0.5rem; }");
@@ -24,6 +24,7 @@ GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width:
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
 GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
 GM_addStyle("div#votedList ol li:hover { text-decoration: line-through; cursor: pointer; }");
+GM_addStyle("div#removedList { font-family: monospace; }");
 
 //-----------------------------------------------
 
@@ -48,13 +49,11 @@ const setCheckVoted = (amount) => `<label class="form-check-label"><input id="on
 const setCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox" ${amount || 'disabled'}><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 const setCheckOld = (amount) => `<label class="form-check-label"><input id="hideOld" type="checkbox" ${amount || 'disabled'}><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 
-const setCheckOrderByNewest = () => `<label class="form-check-label"><input id="orderByNewest" type="checkbox">Sortuj wg najmłodszych stażem</label>`;
-const setCheckOrderByOldest = () => `<label class="form-check-label"><input id="orderByOldest" type="checkbox">Sortuj wg najstarszych stażem</label>`;
+const setCheckOrderByNewest = () => `<label class="form-check-label"><input id="orderByNewest" type="checkbox">Sortuj wg stażu od najmłodszych</label>`;
+const setCheckOrderByOldest = () => `<label class="form-check-label"><input id="orderByOldest" type="checkbox">Sortuj wg stażu od najstarszych</label>`;
 
 const setCheckOrderByLastPA = () => `<label class="form-check-label"><input id="orderByLastPA" type="checkbox">Sortuj wg ostatniej pozycji rosnąco</label>`;
-const setCheckOrderByLastPD = () => `<label class="form-check-label"><input id="orderByLastPD" type="checkbox">Sortuj wg ostatenij pozycji malejąco</label>`;
-
-const setSelectAddBy = () => `<label class="form-check-label">Pokaż tylko utwory zgłoszone przez:</label><select id="chooseAddBy"></select>`;
+const setCheckOrderByLastPD = () => `<label class="form-check-label"><input id="orderByLastPD" type="checkbox">Sortuj wg ostatniej pozycji malejąco</label>`;
 
 const getTagChartLog = (lastP, change, times, weeks) => {
     const ranksPart = `<span>ostatnia poz.: ${lastP}` + (change ? ` (${change})` : '') + '</span>';
@@ -106,7 +105,6 @@ const changeInfoStatus = () => {
 
 const setCheckboxOnly = (element, rest, dic) => {
     element.onclick = (e) => {
-        resetSelectors();
         const checked = e.target.checked;
         mainList.forEach((item, i) => { item.hidden = !dic[i] && checked });
         rest.forEach(x => { x.checked = false });
@@ -116,8 +114,6 @@ const setCheckboxOnly = (element, rest, dic) => {
 
 const setCheckboxHide = (element, rest, list, others) => {
     element.onclick = (e) => {
-        resetSelectors();
-
         const checked = e.target.checked;
         const otherChecked = others.some(x => x.checked);
 
@@ -220,52 +216,6 @@ const addOrderboxes = (setList) => {
 
 //-----------------------------------------------
 
-const persons = {
-    "PD": {list:[], name: "PIOSENKA DNIA"},
-    "OB": {list:[], name: "Ola Budka"},
-    "MC": {list:[], name: "Marcin Cichoński"},
-    "MF": {list:[], name: "Mateusz Fusiarz"},
-    "BG": {list:[], name: "Bartek Gil"},
-    "AG": {list:[], name: "Antoni Grudniewski"},
-    "MK": {list:[], name: "Marta Kula"},
-    "MM": {list:[], name: "Marta Malinowska"},
-    "MN": {list:[], name: "Marek Niedźwiecki"},
-    "MP": {list:[], name: "Maja Piskadło"},
-    "PP": {list:[], name: "Paweł Pobóg-Ruszkowski"},
-    "PS": {list:[], name: "Piotr Stelmach"},
-    "xx": {list:[], name: "NIEPRZYPISANE"}
-}
-
-const setOptions = (dic) => Object.keys(dic)
-    .filter(key => dic[key].list.length)
-    .reduce((options, key) => `${options}<option value=${key}>${dic[key].name} (${dic[key].list.length})</option>`, "<option value=''>Wybierz...</option>");
-
-const setSelector = (element, keys) => {
-    element.onchange = (e) => {
-        resetCheckboxes();
-        const value = e.target.value;
-        mainList.forEach((item, i) => { item.hidden = keys[value] ? !keys[value].dic[i] : false });
-        changeInfoStatus();
-    }
-}
-
-let selectors;
-
-const addSelectors = () => {
-    extraTools.insertAdjacentHTML('beforeend', `<p id="selectors"></p>`);
-    selectors = voteList.querySelector("#selectors");
-
-    selectors.insertAdjacentHTML('beforeend', setSelectAddBy());
-    const chooseAddBy = selectors.querySelector("#chooseAddBy");
-    chooseAddBy.insertAdjacentHTML('beforeend', setOptions(persons));
-
-    setSelector(chooseAddBy, persons);
-}
-
-const resetSelectors = () => selectors.querySelectorAll('select').forEach(select => { select.value = "" });
-
-//-----------------------------------------------
-
 let voteList, listGroup, mainList, itemList;
 let listIsNew, listAwait, listVoted, listBet, listOld;
 
@@ -292,8 +242,8 @@ const addTags = (listNo, setList) => {
         }
 
         if (history) {
-            layoutRight.insertAdjacentHTML('afterbegin', `<div class="ct-chart-${i}" hidden></div>`);
-            const chart = layoutRight.querySelector(`.ct-chart-${i}`);
+            layoutRight.insertAdjacentHTML('afterbegin', `<div id="chart-${i}" class="ct-chart" hidden></div>`);
+            const chart = layoutRight.querySelector(`#chart-${i}`);
             mainList[i].addEventListener('mouseover', (e) => { chart.hidden = false; layoutPhoto.hidden = true });
             mainList[i].addEventListener('mouseout', (e) => { chart.hidden = true; layoutPhoto.hidden = false });
 
@@ -304,10 +254,9 @@ const addTags = (listNo, setList) => {
                 labels: labels,
                 series: [ series ]
             }, {
-                fullWidth: false,
                 height: '500px',
                 width: '550px',
-                color: 'black',
+                fullWidth: false,
                 fillHoles: false,
                 axisY: {
                     low: -50,
@@ -334,13 +283,9 @@ const addTags = (listNo, setList) => {
     listBet = setList.reduce((list, item, i) => item.isBet ? [...list, i] : list, []);
     listOld = setList.reduce((list, item, i) => item.isOld ? [...list, i] : list, []);
 
-    setList.forEach((item, i) => { persons[item.addBy || "xx"].list.push(i) });
-    Object.keys(persons).forEach(key => { persons[key].dic = persons[key].list.reduce((dic, key) => ({...dic, [key]: true}), {}); });
-
     addInfoStatus();
     addCheckboxes();
     addOrderboxes(setList);
-    addSelectors();
 }
 
 //-----------------------------------------------
@@ -379,7 +324,10 @@ const addRemovedList = () => {
         const removed = rightColumn.querySelector("#removedList div");
 
         const removedString = rmList.reduce((string, item) => {
-            return string + `${item.author} - ${item.title}\n`
+            const { author, title, weeks, lastP } = item;
+            const ws = String(weeks).padStart(2, '0');
+            const lp = lastP ? `(${lastP})` : '';
+            return string + `[${ws}] ${author} - ${title} ${lp}\n`;
         }, "");
         removed.innerText = removedString;
     });
