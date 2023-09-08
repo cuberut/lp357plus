@@ -3,7 +3,7 @@
 // @version      1.2
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
-// @match        https://lista.radio357.pl/app/lista/glosowanie
+// @match        https://glosuj.radio357.pl/app/lista/glosowanie
 // @updateURL    https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @downloadURL  https://raw.githubusercontent.com/cuberut/lp357plus/main/lp357plus.js
 // @require      https://cdn.jsdelivr.net/chartist.js/latest/chartist.min.js
