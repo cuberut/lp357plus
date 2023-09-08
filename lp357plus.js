@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.2
+// @version      1.2.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
