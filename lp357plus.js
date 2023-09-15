@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.2.1
+// @version      1.3
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -58,12 +58,7 @@ const setCheckOrderByLastPD = () => `<label class="form-check-label"><input id="
 const getTagChartLog = (lastP, change, times, weeks) => {
     const ranksPart = `<span>ostatnia poz.: ${lastP}` + (change ? ` (${change})` : '') + '</span>';
     const timesPart = times ? `<span>notowanie: ${times} tydzień</span>` : '';
-    const weeksPart = weeks ? `<span>propozycje: ${weeks} tydzień</span>` : '';
-    return `<div class="chart-item__info tagLog">${ranksPart}<br/>${timesPart}<br/>${weeksPart}</div>`
-};
-
-const getTagRestLog = (weeks) => {
-    return `<div class="chart-item__info tagLog"><span>propozycje: ${weeks} tydzień</span></div>`
+    return `<div class="chart-item__info tagLog">${ranksPart}<br/>${timesPart}</div>`
 };
 
 const getTagVotes = (item) => {
@@ -235,9 +230,6 @@ const addTags = (listNo, setList) => {
 
         if (lastP) {
             const tagLog = getTagChartLog(lastP, change, times, weeks);
-            element.insertAdjacentHTML('beforeend', tagLog);
-        } else {
-            const tagLog = getTagRestLog(weeks);
             element.insertAdjacentHTML('beforeend', tagLog);
         }
 
