@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.3
+// @version      1.4
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -16,8 +16,6 @@ const myCss = GM_getResourceText("REMOTE_CSS");
 GM_addStyle(myCss);
 GM_addStyle("div.ct-chart g.ct-grids line[y1='330'] { stroke-dasharray: 8; stroke-width: 2; }");
 
-GM_addStyle("div#loadbar { width: 100%; background-color: #ddd;}");
-GM_addStyle("div#loading { width: 0%; height: 2rem; background-color: #337AB7; padding: 0.25rem 0.5rem; }");
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
 GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
@@ -282,9 +280,6 @@ const addTags = (listNo, setList) => {
 
 //-----------------------------------------------
 
-const showScroll = (state) => { document.body.style.overflow = state ? 'auto' : 'hidden' }
-const toggleVisibility = (element) => { element.style.opacity = (element.style.opacity === '') ? 0 : '' }
-
 const setSearch = (voteList, items) => {
     const searchSection = voteList.querySelector('.vote-list__search');
 
@@ -402,63 +397,28 @@ const setVoteSection = () => {
 //-----------------------------------------------
 
 (function() {
-    showScroll(false);
-
     getList(urlSettingsList).then(setList => {
         const setCounter = setList.length;
 
         let voteList, listNo;
-        let loadbar, loading, progress;
         let items = [];
-        let itemsCounter = 0;
 
         const interval = setInterval(() => {
             if (!voteList) {
                 voteList = document.querySelector('.vote-list');
-            }
-
-            if (voteList && !loading) {
-                toggleVisibility(voteList);
+            } else {
+                clearInterval(interval);
 
                 listNo = +document.querySelector('.header__heading-voting').innerText.split('#')[1];
                 getVotes(listNo, setList);
                 setVotes(listNo);
 
-                voteList.insertAdjacentHTML('beforebegin', `<div id="loadbar"><div id="loading">Zaczytywanie danych...</div></div>`);
-                loading = voteList.parentElement.querySelector("#loading");
-            }
+                items = [...voteList.querySelectorAll('.list-group-item:not([hidden])')];
 
-            if (loading) {
-                let visible = voteList.querySelectorAll('.list-group-item:not([hidden])');
-
-                if (visible.length || itemsCounter == setCounter) {
-                    setTimeout(function(){
-                        visible.forEach(item => {
-                            item.hidden = true;
-
-                            if (!item.counted) {
-                                itemsCounter++;
-                                item.counted = true;
-                            }
-                        });
-                    }, 0);
-
-                    items = [...items, ...visible];
-                    progress = (itemsCounter/setCounter) * 100;
-                    loading.style.width = progress + '%';
-
-                    if (itemsCounter == setCounter) {
-                        loading.hidden = true;
-                        setSearch(voteList, items);
-                        clearInterval(interval);
-                        items.forEach(item => { item.hidden = false });
-                        showScroll(true);
-                        addTags(listNo, setList);
-                        setVoteSection();
-                        toggleVisibility(voteList);
-                        addRemovedList();
-                    }
-                }
+                setSearch(voteList, items);
+                addTags(listNo, setList);
+                setVoteSection();
+                addRemovedList();
             }
         }, 25);
     });
