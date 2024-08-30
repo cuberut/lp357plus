@@ -1,11 +1,11 @@
 **Wspomaganie głosowania LP357**
 
-![image](https://user-images.githubusercontent.com/20903336/228567011-0f783310-6443-4620-b77e-1c36188aeda3.png)
+![image](https://github.com/user-attachments/assets/db790c2b-d4d7-47da-9615-f121bbac82d1)
 
 **Skrypt umożliwia**:
 - filtrowanie po nowościach, oczekujących (OMG) oraz swoich poprzednio oddanych głosach,
 - ukrycie betonu/staroci (utwory notowane/nienotowane ze stażem większym niż 5 tygodni),
-- sortowanie rosnące/malejące po stażu utworu oraz po ostatniej pozycji notowania,
+- sortowanie rosnące/malejące po stażu utworu, alfabetycznie oraz po ostatniej pozycji notowania,
 - przy każdym utworze informacja o stażu oraz jeśli był notowany - ostatnia pozycja wraz z zmianą względem poprzedniego notowania,
 - lista wybranych utworów pod licznikiem oraz przyciskiem zatwierdzania głosów (możliwość usunięcia głosu to kliknięciu w element listy),
 - wykres historii na przestrzeni ostatnich 10 notowań.
