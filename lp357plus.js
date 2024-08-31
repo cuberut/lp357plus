@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.5
+// @version      1.5.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -17,7 +17,7 @@ GM_addStyle(myCss);
 GM_addStyle("div.ct-chart g.ct-grids line[y1='330'] { stroke-dasharray: 8; stroke-width: 2; }");
 
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
-GM_addStyle("div#extraTools label, div#extraTools select { display: inline-block; width: 50%; }");
+GM_addStyle("div#extraTools div, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
 GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
@@ -40,12 +40,12 @@ const getList = async (url) => {
 
 const setInfoStatus = (amount) => `<p id="infoStatus">Liczba widocznych utworów: <strong><span id="infoVisible">${amount}</span>/<span>${amount}</span></strong> (<span id="infoPercent">100</span>%)`;
 
-const setCheckIsNew = (amount) => `<label class="form-check-label"><input id="onlyIsNew" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
-const setCheckAwait = (amount) => `<label class="form-check-label"><input id="onlyAwait" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko oczekujące - ${amount} pozycji</span></label>`;
-const setCheckVoted = (amount) => `<label class="form-check-label"><input id="onlyVoted" type="checkbox" ${amount || 'disabled'}><span>Pokaż tylko moje typy - ${amount} pozycji</span></label>`;
+const setCheckIsNew = (amount) => `<div><input type="checkbox" id="onlyIsNew" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyIsNew"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
+const setCheckAwait = (amount) => `<div><input type="checkbox" id="onlyAwait" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyAwait"><span>Pokaż tylko oczekujące - ${amount} pozycji</span></label></div>`;
+const setCheckVoted = (amount) => `<div><input type="checkbox" id="onlyVoted" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyVoted"><span>Pokaż tylko moje typy - ${amount} pozycji</span></label></div>`;
 
-const setCheckBet = (amount) => `<label class="form-check-label"><input id="hideBet" type="checkbox" ${amount || 'disabled'}><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
-const setCheckOld = (amount) => `<label class="form-check-label"><input id="hideOld" type="checkbox" ${amount || 'disabled'}><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+const setCheckBet = (amount) => `<div><input type="checkbox" id="hideBet" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="hideBet"><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label></div>`;
+const setCheckOld = (amount) => `<div><input type="checkbox" id="hideOld" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="hideOld"><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label></div>`;
 
 const sortingOrderIcon = (iconType) => `<i class="fa ${iconType}"/>`;
 const setSortByPosition = () => `<button id="sortByPosition" class="vote-list__sort-item">według notowania </button>`;
