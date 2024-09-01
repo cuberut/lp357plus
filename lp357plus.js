@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.5.1
+// @version      1.5.2
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -15,6 +15,8 @@
 const myCss = GM_getResourceText("REMOTE_CSS");
 GM_addStyle(myCss);
 GM_addStyle("div.ct-chart g.ct-grids line[y1='330'] { stroke-dasharray: 8; stroke-width: 2; }");
+GM_addStyle("div.ct-chart g.ct-series-a .ct-line { stroke: #f95f1f }");
+GM_addStyle("div.ct-chart g.ct-series-a .ct-point { stroke: #f95f1f; fill: #f95f1f; }");
 
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
 GM_addStyle("div#extraTools div, div#extraTools select { display: inline-block; width: 50%; }");
