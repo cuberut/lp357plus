@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.5.2
+// @version      1.6
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -402,36 +402,35 @@ const setVoteSection = (listNo) => {
     if (voteSection) {
         voteSection.insertAdjacentHTML('beforeend', `<div id="votedList"><ol></ol></div>`);
         const votedList = voteSection.querySelector('#votedList ol');
-
         const voteCounter = voteSection.querySelector('.vote__votes');
-        voteCounter.addEventListener("DOMSubtreeModified", (e) => {
-            const checkedItems = voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked')
+
+        const observer = new MutationObserver(() => {
+            const checkedItems = voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked');
             const list = [...checkedItems].reduce((list, item) => {
                 const id = item.id;
                 const song = item.parentElement.lastChild.innerText.replace("\n", " - ");
                 return `${list}<li for="${id}">${song}</li>`;
             }, "");
 
-            votedList.textContent = null
+            votedList.textContent = null;
             votedList.insertAdjacentHTML('beforeend', list);
 
-            votedList.addEventListener("DOMSubtreeModified", (e) => {
-                const voteList = document.querySelector('.vote-list');
-                const votedItems = [...voteList.querySelectorAll('.vote-item input:checked')];
-                const votedList = votedItems.map(elem => +elem.value);
+            const votedItems = [...voteList.querySelectorAll('.vote-item input:checked')];
+            const votedListArray = votedItems.map(elem => +elem.value);
 
-                localStorage.setItem("myVotes" + listNo, JSON.stringify(votedList));
-            });
+            localStorage.setItem("myVotes" + listNo, JSON.stringify(votedListArray));
 
-            const votedItems = [...voteSection.querySelectorAll('li')];
-            votedItems.forEach(li => {
+            const votedItemsLi = [...votedList.querySelectorAll('li')];
+            votedItemsLi.forEach(li => {
                 li.addEventListener("click", (e) => {
                     const forId = e.target.getAttribute("for");
                     const input = voteList.querySelector(`#${forId}`);
                     input.click();
                 });
             });
-        }, false);
+        });
+
+        observer.observe(voteCounter, { characterData: true, subtree: true });
     }
 }
 
