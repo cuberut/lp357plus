@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.6
+// @version      1.6.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -17,10 +17,10 @@ GM_addStyle(myCss);
 GM_addStyle("div.ct-chart g.ct-grids line[y1='330'] { stroke-dasharray: 8; stroke-width: 2; }");
 GM_addStyle("div.ct-chart g.ct-series-a .ct-line { stroke: #f95f1f }");
 GM_addStyle("div.ct-chart g.ct-series-a .ct-point { stroke: #f95f1f; fill: #f95f1f; }");
-
 GM_addStyle("div.tagLog { width: 110px; position: absolute; right: 0; margin-right: 60px; text-align: left; }");
 GM_addStyle("div#extraTools div, div#extraTools select { display: inline-block; width: 50%; }");
 GM_addStyle("span#infoVisible { display: inline-block; text-align: right; width: 30px; }");
+GM_addStyle("div#averageSeniority { margin: 0px -20px 10px }");
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
 GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
 GM_addStyle("div#votedList ol li:hover { text-decoration: line-through; cursor: pointer; }");
@@ -235,7 +235,8 @@ const addFilters = (setList) => {
 
 //-----------------------------------------------
 
-let voteList, filters, listGroup, mainList, itemDict;
+let voteList, filters, listGroup, mainList;
+let itemDict, seniorityDic;
 let listIsNew, listAwait, listVoted, listBet, listOld;
 
 const addTags = (listNo, setList) => {
@@ -243,9 +244,15 @@ const addTags = (listNo, setList) => {
     filters = voteList.querySelector('.vote-list__filters');
     listGroup = voteList.querySelector('ul.list-group');
     mainList = [...voteList.querySelectorAll(".list-group-item")];
+
     itemDict = mainList.reduce((itemDict, button) => ({
         ...itemDict,
         [button.getAttribute('data-vote-id')]: button
+    }), []);
+
+    seniorityDic = setList.reduce((dic, item) => ({
+        ...dic,
+        [item.id]: +item.weeks
     }), []);
 
 
@@ -400,17 +407,30 @@ const setVoteSection = (listNo) => {
     const voteSection = document.querySelector('.layout__action');
 
     if (voteSection) {
+        const cardBody = voteSection.querySelector('.card-body');
+
+        const button = cardBody.querySelector('button');
+        button.classList.remove('mb-lg-4');
+
+        button.insertAdjacentHTML('beforebegin', `<div id="averageSeniority"><span class="vote__text">Średni staż: <strong class="vote__seniority">0.00</strong> tygodni</span></div>`);
+        const votedSeniority = cardBody.querySelector('strong.vote__seniority');
+
         voteSection.insertAdjacentHTML('beforeend', `<div id="votedList"><ol></ol></div>`);
         const votedList = voteSection.querySelector('#votedList ol');
         const voteCounter = voteSection.querySelector('.vote__votes');
 
         const observer = new MutationObserver(() => {
-            const checkedItems = voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked');
-            const list = [...checkedItems].reduce((list, item) => {
-                const id = item.id;
+            const checkedItems = [...voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked')];
+
+            const list = checkedItems.reduce((list, item) => {
+                const vid = item.id;
                 const song = item.parentElement.lastChild.innerText.replace("\n", " - ");
-                return `${list}<li for="${id}">${song}</li>`;
+                return `${list}<li for="${vid}">${song}</li>`;
             }, "");
+
+            const selectedIds = checkedItems.map(item => item._value);
+            const averageSeniority = selectedIds.reduce((acc, id) => acc + seniorityDic[id], 0) / selectedIds.length || 0;
+            votedSeniority.innerText = averageSeniority.toFixed(2);
 
             votedList.textContent = null;
             votedList.insertAdjacentHTML('beforeend', list);
