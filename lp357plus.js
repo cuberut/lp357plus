@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.6.1
+// @version      1.7
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -34,8 +34,7 @@ const urlRemovedList = urlApi + 'removedList';
 
 const getList = async (url) => {
     const response = await fetch(url);
-    const myJson = await response.json();
-    return await myJson;
+    return response.json();
 }
 
 //-----------------------------------------------
@@ -81,16 +80,8 @@ const addInfoStatus = () => {
 
 const changeInfoStatus = () => {
     const amountVisible = voteList.querySelectorAll('.list-group-item:not([hidden])').length;
-    infoVisible.innerText = amountVisible;
-
-    if (amountVisible == amountAll) {
-        infoPercent.innerText = 100;
-    } else if (amountVisible == 0) {
-        infoPercent.innerText = 0;
-    } else {
-        const amountPercent = amountVisible / amountAll * 100;
-        infoPercent.innerText = amountPercent.toFixed(0);
-    }
+    infoVisible.textContent = amountVisible;
+    infoPercent.textContent = amountVisible === amountAll ? 100 : amountVisible === 0 ? 0 : Math.round(amountVisible / amountAll * 100);
 }
 
 //-----------------------------------------------
@@ -98,8 +89,10 @@ const changeInfoStatus = () => {
 const setCheckboxOnly = (element, rest, dic) => {
     element.onclick = (e) => {
         const checked = e.target.checked;
-        Object.entries(itemDict).forEach(([id, item]) => { item.hidden = !dic[id] && checked });
-        rest.forEach(x => { x.checked = false });
+        for (const id in itemDict) {
+            itemDict[id].hidden = !dic[id] && checked;
+        }
+        for (let i = 0; i < rest.length; i++) rest[i].checked = false;
         changeInfoStatus();
     }
 }
@@ -107,14 +100,20 @@ const setCheckboxOnly = (element, rest, dic) => {
 const setCheckboxHide = (element, rest, list, others) => {
     element.onclick = (e) => {
         const checked = e.target.checked;
-        const otherChecked = others.some(x => x.checked);
-
-        if (checked && !otherChecked) {
-            mainList.forEach(item => { item.hidden = false });
+        let otherChecked = false;
+        for (let i = 0; i < others.length; i++) {
+            if (others[i].checked) {
+                otherChecked = true;
+                break;
+            }
         }
 
-        list.forEach(id => { itemDict[id].hidden = checked });
-        rest.forEach(x => { x.checked = false });
+        if (checked && !otherChecked) {
+            for (let i = 0; i < mainList.length; i++) mainList[i].hidden = false;
+        }
+
+        for (let i = 0; i < list.length; i++) itemDict[list[i]].hidden = checked;
+        for (let i = 0; i < rest.length; i++) rest[i].checked = false;
 
         changeInfoStatus();
     }
@@ -123,31 +122,32 @@ const setCheckboxHide = (element, rest, list, others) => {
 let checkboxes;
 
 const addCheckboxes = (setList) => {
-    extraTools.insertAdjacentHTML('beforeend', `<p id="checkboxes"></p>`);
-    checkboxes = voteList.querySelector("#checkboxes");
+    const fragment = document.createDocumentFragment();
+    const checkboxesEl = document.createElement('p');
+    checkboxesEl.id = 'checkboxes';
+    
+    const html = setCheckIsNew(listIsNew.length) + 
+                 setCheckBet(listBet.length) + 
+                 setCheckAwait(listAwait.length) + 
+                 setCheckOld(listOld.length) + 
+                 setCheckVoted(listVoted.length);
+    checkboxesEl.innerHTML = html;
+    fragment.appendChild(checkboxesEl);
+    extraTools.appendChild(fragment);
+    checkboxes = checkboxesEl;
 
-    const checkIsNew = setCheckIsNew(listIsNew.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkIsNew);
     const onlyIsNew = checkboxes.querySelector("#onlyIsNew");
-    const dicIsNew = listIsNew.reduce((dic, key) => ({...dic, [key]: true}), {});
-
-    const checkBet = setCheckBet(listBet.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkBet);
     const hideBet = checkboxes.querySelector("#hideBet");
-
-    const checkAwait = setCheckAwait(listAwait.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkAwait);
     const onlyAwait = checkboxes.querySelector("#onlyAwait");
-    const dicAwait = listAwait.reduce((dic, key) => ({...dic, [key]: true}), {});
-
-    const checkOld = setCheckOld(listOld.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkOld);
     const hideOld = checkboxes.querySelector("#hideOld");
-
-    const checkVoted = setCheckVoted(listVoted.length);
-    checkboxes.insertAdjacentHTML('beforeend', checkVoted);
     const onlyVoted = checkboxes.querySelector("#onlyVoted");
-    const dicVoted = listVoted.reduce((dic, key) => ({...dic, [key]: true}), {});
+    
+    const dicIsNew = {};
+    for (let i = 0; i < listIsNew.length; i++) dicIsNew[listIsNew[i]] = true;
+    const dicAwait = {};
+    for (let i = 0; i < listAwait.length; i++) dicAwait[listAwait[i]] = true;
+    const dicVoted = {};
+    for (let i = 0; i < listVoted.length; i++) dicVoted[listVoted[i]] = true;
 
     setCheckboxOnly(onlyIsNew, [onlyAwait, onlyVoted, hideBet, hideOld], dicIsNew);
     setCheckboxOnly(onlyAwait, [onlyIsNew, onlyVoted, hideBet, hideOld], dicAwait);
@@ -201,9 +201,10 @@ const setOrder = (element, restButtons, orderList, restList = []) => {
             sortIcon.classList.add(sortClassAsc);
         }
 
-        const settingList = [...tempOrderList, ...restList];
-
-        settingList.forEach(id => listGroup.append(itemDict[id]));
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < tempOrderList.length; i++) fragment.appendChild(itemDict[tempOrderList[i]]);
+        for (let i = 0; i < restList.length; i++) fragment.appendChild(itemDict[restList[i]]);
+        listGroup.appendChild(fragment);
     }
 }
 
@@ -212,21 +213,32 @@ const addFilters = (setList) => {
     const sortings = filters.querySelector(".vote-list__sort");
     const buttons = sortings.querySelectorAll("button");
 
-    const orderList = [...setList]
-        .map((item, i) => ({ id: item.id, no: i, name: +item.alpha+1, age: +item.weeks, rank: item.lastP ? +item.lastP : 0 }))
-        .sort((a, b) => (a.name < b.name) ? -1 : 1);
+    const orderList = setList.map((item, i) => ({ 
+        id: item.id, 
+        no: i, 
+        name: +item.alpha + 1, 
+        age: +item.weeks, 
+        rank: item.lastP ? +item.lastP : 0 
+    }));
 
     const sortButtonBySeniority = buttons[0];
-    sortButtonBySeniority.insertAdjacentHTML('beforeend', sortingOrderIcon(sortClassAsc))
-    const orderListBySeniority = orderList.sort((a, b) => (a.age < b.age) ? -1 : 1).map(item => item.id);
-
+    sortButtonBySeniority.insertAdjacentHTML('beforeend', sortingOrderIcon(sortClassAsc));
+    
     const sortButtonByAlphabet = buttons[1];
-    const orderListByAlphabet = orderList.sort((a, b) => (a.name < b.name) ? -1 : 1).map(item => item.id);
+    const orderListBySeniority = orderList.slice().sort((a, b) => a.age - b.age).map(item => item.id);
+    const orderListByAlphabet = orderList.slice().sort((a, b) => a.name - b.name).map(item => item.id);
 
     sortings.insertAdjacentHTML('beforeend', setSortByPosition());
     const sortButtonByPosition = sortings.querySelector("#sortByPosition");
-    const orderListByPositionMain = orderList.filter(x => x.rank).sort((a, b) => (a.rank < b.rank) ? -1 : 1).map(item => item.id);
-    const orderListByPositionRest = orderList.filter(x => !x.rank).sort((a, b) => (a.age < b.age) ? -1 : 1).map(item => item.id);
+    
+    const withRank = [];
+    const withoutRank = [];
+    for (let i = 0; i < orderList.length; i++) {
+        if (orderList[i].rank) withRank.push(orderList[i]);
+        else withoutRank.push(orderList[i]);
+    }
+    const orderListByPositionMain = withRank.sort((a, b) => a.rank - b.rank).map(item => item.id);
+    const orderListByPositionRest = withoutRank.sort((a, b) => a.age - b.age).map(item => item.id);
 
     setOrder(sortButtonBySeniority, [sortButtonByAlphabet, sortButtonByPosition], orderListBySeniority);
     setOrder(sortButtonByAlphabet, [sortButtonByPosition, sortButtonBySeniority], orderListByAlphabet);
@@ -245,15 +257,16 @@ const addTags = (listNo, setList) => {
     listGroup = voteList.querySelector('ul.list-group');
     mainList = [...voteList.querySelectorAll(".list-group-item")];
 
-    itemDict = mainList.reduce((itemDict, button) => ({
-        ...itemDict,
-        [button.getAttribute('data-vote-id')]: button
-    }), []);
+    itemDict = {};
+    for (let i = 0; i < mainList.length; i++) {
+        const button = mainList[i];
+        itemDict[button.getAttribute('data-vote-id')] = button;
+    }
 
-    seniorityDic = setList.reduce((dic, item) => ({
-        ...dic,
-        [item.id]: +item.weeks
-    }), []);
+    seniorityDic = {};
+    for (let i = 0; i < setList.length; i++) {
+        seniorityDic[setList[i].id] = +setList[i].weeks;
+    }
 
 
     const layoutRight = document.querySelector('div[slug="lista"] .layout__right-column .layout__photo');
@@ -263,6 +276,12 @@ const addTags = (listNo, setList) => {
     setList.forEach((item, i) => {
         const { id, lastP, change, times, isNew, weeks, votes, history } = item;
         const button = itemDict[id];
+
+        if (!button) {
+            console.log('Problem z utworem o ID: ', id);
+            return;
+        }
+
         const element = button.querySelector('.vote-item');
 
         if (lastP) {
@@ -276,8 +295,13 @@ const addTags = (listNo, setList) => {
             button.addEventListener('mouseover', (e) => { chart.hidden = false; layoutPhoto.hidden = true });
             button.addEventListener('mouseout', (e) => { chart.hidden = true; layoutPhoto.hidden = false });
 
-            const labels = [...Array(10).keys()].map(x => (x + listNo - 10));
-            const series = history.split(",").map(x => -x || null);
+            const labels = [];
+            for (let x = 0; x < 10; x++) labels.push(x + listNo - 10);
+            const series = [];
+            const historyParts = history.split(",");
+            for (let x = 0; x < historyParts.length; x++) {
+                series.push(-historyParts[x] || null);
+            }
 
             new window.Chartist.Line(chart, {
                 labels: labels,
@@ -305,12 +329,19 @@ const addTags = (listNo, setList) => {
         }
     });
 
-    listIsNew = setList.reduce((list, item) => item.isNew ? [...list, item.id] : list, []);
-    listAwait = setList.reduce((list, item) => item.lastP > 35 ? [...list, item.id] : list, []);
-    listVoted = setList.reduce((list, item) => item.votes ? [...list, item.id] : list, []);
-
-    listBet = setList.reduce((list, item) => item.isBet ? [...list, item.id] : list, []);
-    listOld = setList.reduce((list, item) => item.isOld ? [...list, item.id] : list, []);
+    listIsNew = [];
+    listAwait = [];
+    listVoted = [];
+    listBet = [];
+    listOld = [];
+    for (let i = 0; i < setList.length; i++) {
+        const item = setList[i];
+        if (item.isNew) listIsNew.push(item.id);
+        if (item.lastP > 35) listAwait.push(item.id);
+        if (item.votes) listVoted.push(item.id);
+        if (item.isBet) listBet.push(item.id);
+        if (item.isOld) listOld.push(item.id);
+    }
 
     addInfoStatus();
     addCheckboxes();
@@ -334,11 +365,12 @@ const setSearch = (voteList, items) => {
         title: item.querySelector('.vote-item__title').innerText.toLowerCase()
     }));
 
-    searchCustom.addEventListener('change', (e) => {
+    searchCustom.addEventListener('input', (e) => {
         const value = e.target.value.toLowerCase();
-        listElement.map(item => {
+        for (let i = 0; i < listElement.length; i++) {
+            const item = listElement[i];
             item.element.hidden = !(item.author.includes(value) || item.title.includes(value));
-        });
+        }
         changeInfoStatus();
     });
 }
@@ -349,13 +381,14 @@ const addRemovedList = () => {
         rightColumn.insertAdjacentHTML('afterbegin', `<div id="removedList"><strong>Usunięto ${rmList.length} utworów:</strong><div></div></div>`);
         const removed = rightColumn.querySelector("#removedList div");
 
-        const removedString = rmList.reduce((string, item) => {
-            const { author, title, weeks, lastP } = item;
-            const ws = String(weeks).padStart(2, '0');
-            const lp = lastP ? `(${lastP})` : '';
-            return string + `[${ws}] ${author} - ${title} ${lp}\n`;
-        }, "");
-        removed.innerText = removedString;
+        let removedString = "";
+        for (let i = 0; i < rmList.length; i++) {
+            const item = rmList[i];
+            const ws = String(item.weeks).padStart(2, '0');
+            const lp = item.lastP ? `(${item.lastP})` : '';
+            removedString += `[${ws}] ${item.author} - ${item.title} ${lp}\n`;
+        }
+        removed.textContent = removedString;
     });
 }
 
@@ -364,25 +397,29 @@ const addRemovedList = () => {
 const getVotes = (listNo, setList) => {
     const myVotes = {};
 
-    for (var i = 1; i < listNo+1; i++) {
-        const votes = JSON.parse(localStorage.getItem("myVotes" + i));
-        const last = (i == listNo);
+    for (let i = 1; i <= listNo; i++) {
+        const votesStr = localStorage.getItem("myVotes" + i);
+        if (!votesStr) continue;
+        
+        const votes = JSON.parse(votesStr);
+        const last = (i === listNo);
 
-        if (votes) {
-            votes.forEach(id => {
-                if (myVotes[id]) {
-                    myVotes[id].count++;
-                } else {
-                    myVotes[id] = { count: 1 };
-                }
-                if (last) {
-                    myVotes[id].last = true;
-                }
-            });
+        for (let j = 0; j < votes.length; j++) {
+            const id = votes[j];
+            if (myVotes[id]) {
+                myVotes[id].count++;
+            } else {
+                myVotes[id] = { count: 1 };
+            }
+            if (last) {
+                myVotes[id].last = true;
+            }
         }
     }
 
-    setList.forEach(item => { item.votes = myVotes[item.id] });
+    for (let i = 0; i < setList.length; i++) {
+        setList[i].votes = myVotes[setList[i].id];
+    }
 }
 
 const setVotes = (listNo) => {
@@ -391,14 +428,16 @@ const setVotes = (listNo) => {
     if (voteContent) {
         const voteButton = voteContent.querySelector('button');
 
-        voteButton.addEventListener('click', (e) => {
+        voteButton.addEventListener('click', () => {
             extraTools.hidden = true;
 
-            const voteList = document.querySelector('.vote-list');
-            const votedItems = [...voteList.querySelectorAll('.vote-item input:checked')];
-            const votedList = votedItems.map(elem => +elem.value);
+            const votedItems = voteList.querySelectorAll('.vote-item input:checked');
+            const votedListArray = [];
+            for (let i = 0; i < votedItems.length; i++) {
+                votedListArray.push(+votedItems[i].value);
+            }
 
-            localStorage.setItem("myVotes" + listNo, JSON.stringify(votedList));
+            localStorage.setItem("myVotes" + listNo, JSON.stringify(votedListArray));
         });
     }
 }
@@ -412,7 +451,7 @@ const setVoteSection = (listNo) => {
         const button = cardBody.querySelector('button');
         button.classList.remove('mb-lg-4');
 
-        button.insertAdjacentHTML('beforebegin', `<div id="averageSeniority"><span class="vote__text">Średni staż: <strong class="vote__seniority">0.00</strong> tygodni</span></div>`);
+        button.insertAdjacentHTML('beforebegin', `<div id="averageSeniority"><span class="vote__text">Średni staż: <strong class="vote__seniority">0.00</strong> (tyg.)</span></div>`);
         const votedSeniority = cardBody.querySelector('strong.vote__seniority');
 
         voteSection.insertAdjacentHTML('beforeend', `<div id="votedList"><ol></ol></div>`);
@@ -420,34 +459,41 @@ const setVoteSection = (listNo) => {
         const voteCounter = voteSection.querySelector('.vote__votes');
 
         const observer = new MutationObserver(() => {
-            const checkedItems = [...voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked')];
+            const checkedItems = voteList.querySelectorAll('ul.list-group input[type="checkbox"]:checked');
+            const checkedArray = Array.from(checkedItems);
 
-            const list = checkedItems.reduce((list, item) => {
+            let listHTML = "";
+            const selectedIds = [];
+            for (let i = 0; i < checkedArray.length; i++) {
+                const item = checkedArray[i];
                 const vid = item.id;
-                const song = item.parentElement.lastChild.innerText.replace("\n", " - ");
-                return `${list}<li for="${vid}">${song}</li>`;
-            }, "");
+                const song = item.parentElement.lastChild.textContent.replace("\n", " - ");
+                listHTML += `<li for="${vid}">${song}</li>`;
+                selectedIds.push(item._value);
+            }
 
-            const selectedIds = checkedItems.map(item => item._value);
-            const averageSeniority = selectedIds.reduce((acc, id) => acc + seniorityDic[id], 0) / selectedIds.length || 0;
-            votedSeniority.innerText = averageSeniority.toFixed(2);
+            const averageSeniority = selectedIds.length ? 
+                selectedIds.reduce((acc, id) => acc + (seniorityDic[id] || 0), 0) / selectedIds.length : 0;
+            votedSeniority.textContent = averageSeniority.toFixed(2);
 
             votedList.textContent = null;
-            votedList.insertAdjacentHTML('beforeend', list);
+            votedList.insertAdjacentHTML('beforeend', listHTML);
 
-            const votedItems = [...voteList.querySelectorAll('.vote-item input:checked')];
-            const votedListArray = votedItems.map(elem => +elem.value);
+            const votedItems = voteList.querySelectorAll('.vote-item input:checked');
+            const votedListArray = [];
+            for (let i = 0; i < votedItems.length; i++) {
+                votedListArray.push(+votedItems[i].value);
+            }
 
             localStorage.setItem("myVotes" + listNo, JSON.stringify(votedListArray));
-
-            const votedItemsLi = [...votedList.querySelectorAll('li')];
-            votedItemsLi.forEach(li => {
-                li.addEventListener("click", (e) => {
-                    const forId = e.target.getAttribute("for");
-                    const input = voteList.querySelector(`#${forId}`);
-                    input.click();
-                });
-            });
+        });
+        
+        votedList.addEventListener("click", (e) => {
+            if (e.target.tagName === 'LI') {
+                const forId = e.target.getAttribute("for");
+                const input = voteList.querySelector(`#${forId}`);
+                if (input) input.click();
+            }
         });
 
         observer.observe(voteCounter, { characterData: true, subtree: true });
@@ -458,27 +504,28 @@ const setVoteSection = (listNo) => {
 
 (function() {
     getList(urlSettingsList).then(setList => {
-        const setCounter = setList.length;
-
-        let voteList, listNo;
+        let voteListEl, listNo;
         let items = [];
 
-        const interval = setInterval(() => {
-            if (!voteList) {
-                voteList = document.querySelector('.vote-list');
-            } else {
-                clearInterval(interval);
-
-                listNo = +document.querySelector('.header__heading-voting').innerText.split('#')[1];
-                getVotes(listNo, setList);
-
-                items = [...voteList.querySelectorAll('.list-group-item:not([hidden])')];
-
-                setSearch(voteList, items);
-                addTags(listNo, setList);
-                setVoteSection(listNo);
-                addRemovedList();
+        const checkForElement = () => {
+            voteListEl = document.querySelector('.vote-list');
+            if (!voteListEl) {
+                requestAnimationFrame(checkForElement);
+                return;
             }
-        }, 25);
+
+            const heading = document.querySelector('.header__heading-voting');
+            listNo = +heading.textContent.split('#')[1];
+            getVotes(listNo, setList);
+
+            items = Array.from(voteListEl.querySelectorAll('.list-group-item:not([hidden])'));
+
+            setSearch(voteListEl, items);
+            addTags(listNo, setList);
+            setVoteSection(listNo);
+            addRemovedList();
+        };
+        
+        requestAnimationFrame(checkForElement);
     });
 })();
