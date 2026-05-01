@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.7
+// @version      1.8
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -24,22 +24,41 @@ GM_addStyle("div#averageSeniority { margin: 0px -20px 10px }");
 GM_addStyle("div#votes { position: absolute; left: 10px; width: auto; text-align: center; }");
 GM_addStyle("div#votedList ol { font-size: small; padding-left: 1.5em; margin-top: 1em; }");
 GM_addStyle("div#votedList ol li:hover { text-decoration: line-through; cursor: pointer; }");
-GM_addStyle("div#removedList { font-family: monospace; }");
+GM_addStyle("div#removedList { font-family: monospace; white-space: pre-wrap }");
 
 //-----------------------------------------------
 
+const SUPABASE_CONFIG = {
+    PROJECT_ID: 'nsihmtsjdhzaxxjkscvu',
+    ANON_KEY: 'sb_publishable_5LtXM7jXtz90avCvWyZrGw_gJchJoXt',
+    get BASE_URL() {
+        return `https://${this.PROJECT_ID}.supabase.co/rest/v1`;
+    },
+    get options() {
+        return {
+            method: 'GET',
+            headers: {
+                'apikey': this.ANON_KEY,
+                'Content-Type': 'application/json'
+            }
+        };
+    }
+};
+
 const urlApi = 'https://opensheet.elk.sh/1toPeVyvsvh1QB-zpskh3zOxWl-OuSgKauyf7nPu85s8/';
-const urlSettingsList = urlApi + 'settingsList';
-const urlRemovedList = urlApi + 'removedList';
+const urlSettingsList = `${SUPABASE_CONFIG.BASE_URL}/mv_proposals_active`;
+const urlRemovedList = `${SUPABASE_CONFIG.BASE_URL}/mv_proposals_removed`;
+
+console.log("testing");
 
 const getList = async (url) => {
-    const response = await fetch(url);
+    const response = await fetch(url, SUPABASE_CONFIG.options);
     return response.json();
 }
 
 //-----------------------------------------------
 
-const setInfoStatus = (amount) => `<p id="infoStatus">Liczba widocznych utworów: <strong><span id="infoVisible">${amount}</span>/<span>${amount}</span></strong> (<span id="infoPercent">100</span>%)`;
+const setInfoStatus = (amount) => `<p id="infoStatus">Liczba widocznych utworów: <strong><span id="infoVisible">${amount}</span>/<span>${amount}</span></strong> (<span id="infoPercent">100</span>%)</p>`;
 
 const setCheckIsNew = (amount) => `<div><input type="checkbox" id="onlyIsNew" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyIsNew"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
 const setCheckAwait = (amount) => `<div><input type="checkbox" id="onlyAwait" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyAwait"><span>Pokaż tylko oczekujące - ${amount} pozycji</span></label></div>`;
@@ -51,8 +70,8 @@ const setCheckOld = (amount) => `<div><input type="checkbox" id="hideOld" class=
 const sortingOrderIcon = (iconType) => `<i class="fa ${iconType}"/>`;
 const setSortByPosition = () => `<button id="sortByPosition" class="vote-list__sort-item">według notowania </button>`;
 
-const getTagChartLog = (lastP, change, times, weeks) => {
-    const ranksPart = `<span>ostatnia poz.: ${lastP}` + (change ? ` (${change})` : '') + '</span>';
+const getTagChartLog = (last_position, last_change, times, weeks) => {
+    const ranksPart = `<span>ostatnia poz.: ${last_position}` + (last_change ? ` (${last_change})` : '') + '</span>';
     const timesPart = times ? `<span>notowanie: ${times} tydzień</span>` : '';
     return `<div class="chart-item__info tagLog">${ranksPart}<br/>${timesPart}</div>`
 };
@@ -125,11 +144,11 @@ const addCheckboxes = (setList) => {
     const fragment = document.createDocumentFragment();
     const checkboxesEl = document.createElement('p');
     checkboxesEl.id = 'checkboxes';
-    
-    const html = setCheckIsNew(listIsNew.length) + 
-                 setCheckBet(listBet.length) + 
-                 setCheckAwait(listAwait.length) + 
-                 setCheckOld(listOld.length) + 
+
+    const html = setCheckIsNew(listIsNew.length) +
+                 setCheckBet(listBet.length) +
+                 setCheckAwait(listAwait.length) +
+                 setCheckOld(listOld.length) +
                  setCheckVoted(listVoted.length);
     checkboxesEl.innerHTML = html;
     fragment.appendChild(checkboxesEl);
@@ -141,7 +160,7 @@ const addCheckboxes = (setList) => {
     const onlyAwait = checkboxes.querySelector("#onlyAwait");
     const hideOld = checkboxes.querySelector("#hideOld");
     const onlyVoted = checkboxes.querySelector("#onlyVoted");
-    
+
     const dicIsNew = {};
     for (let i = 0; i < listIsNew.length; i++) dicIsNew[listIsNew[i]] = true;
     const dicAwait = {};
@@ -186,7 +205,7 @@ const setOrder = (element, restButtons, orderList, restList = []) => {
         const isSortAsc = sortIcon && sortIcon.classList.contains(sortClassAsc);
 
         if (!sortIcon) {
-            button.insertAdjacentHTML('beforeend', sortingOrderIcon());
+            button.insertAdjacentHTML('beforeend', sortingOrderIcon(sortClassAsc));
             sortIcon = button.querySelector('i');
         }
 
@@ -210,27 +229,30 @@ const setOrder = (element, restButtons, orderList, restList = []) => {
 
 const addFilters = (setList) => {
     const filters = voteList.querySelector(".vote-list__filters");
+    if (!filters) return;
     const sortings = filters.querySelector(".vote-list__sort");
+    if (!sortings) return;
     const buttons = sortings.querySelectorAll("button");
+    if (!buttons || buttons.length < 2) return;
 
-    const orderList = setList.map((item, i) => ({ 
-        id: item.id, 
-        no: i, 
-        name: +item.alpha + 1, 
-        age: +item.weeks, 
-        rank: item.lastP ? +item.lastP : 0 
+    const orderList = setList.map((item, i) => ({
+        id: item.track_id,
+        no: i,
+        name: +item.alpha + 1,
+        age: +item.weeks,
+        rank: item.last_position ? +item.last_position : 0
     }));
 
     const sortButtonBySeniority = buttons[0];
     sortButtonBySeniority.insertAdjacentHTML('beforeend', sortingOrderIcon(sortClassAsc));
-    
+
     const sortButtonByAlphabet = buttons[1];
     const orderListBySeniority = orderList.slice().sort((a, b) => a.age - b.age).map(item => item.id);
     const orderListByAlphabet = orderList.slice().sort((a, b) => a.name - b.name).map(item => item.id);
 
     sortings.insertAdjacentHTML('beforeend', setSortByPosition());
     const sortButtonByPosition = sortings.querySelector("#sortByPosition");
-    
+
     const withRank = [];
     const withoutRank = [];
     for (let i = 0; i < orderList.length; i++) {
@@ -253,9 +275,11 @@ let listIsNew, listAwait, listVoted, listBet, listOld;
 
 const addTags = (listNo, setList) => {
     voteList = document.querySelector('.vote-list');
+    if (!voteList) return;
     filters = voteList.querySelector('.vote-list__filters');
     listGroup = voteList.querySelector('ul.list-group');
-    mainList = [...voteList.querySelectorAll(".list-group-item")];
+    if (!listGroup) return;
+    mainList = Array.from(voteList.querySelectorAll(".list-group-item"));
 
     itemDict = {};
     for (let i = 0; i < mainList.length; i++) {
@@ -265,33 +289,34 @@ const addTags = (listNo, setList) => {
 
     seniorityDic = {};
     for (let i = 0; i < setList.length; i++) {
-        seniorityDic[setList[i].id] = +setList[i].weeks;
+        seniorityDic[setList[i].track_id] = +setList[i].weeks;
     }
 
 
     const layoutRight = document.querySelector('div[slug="lista"] .layout__right-column .layout__photo');
+    if (!layoutRight) return;
     layoutRight.style.right = "auto";
     const layoutPhoto = layoutRight.querySelector('div');
 
     setList.forEach((item, i) => {
-        const { id, lastP, change, times, isNew, weeks, votes, history } = item;
-        const button = itemDict[id];
+        const { track_id, last_position, last_change, times, weeks, votes, history } = item;
+        const button = itemDict[track_id];
 
         if (!button) {
-            console.log('Problem z utworem o ID: ', id);
+            console.log('Problem z utworem o ID: ', track_id);
             return;
         }
 
         const element = button.querySelector('.vote-item');
 
-        if (lastP) {
-            const tagLog = getTagChartLog(lastP, change, times, weeks);
+        if (last_position) {
+            const tagLog = getTagChartLog(last_position, last_change, times, weeks);
             element.insertAdjacentHTML('beforeend', tagLog);
         }
 
         if (history) {
-            layoutRight.insertAdjacentHTML('afterbegin', `<div id="chart-${id}" class="ct-chart" hidden></div>`);
-            const chart = layoutRight.querySelector(`#chart-${id}`);
+            layoutRight.insertAdjacentHTML('afterbegin', `<div id="chart-${track_id}" class="ct-chart" hidden></div>`);
+            const chart = layoutRight.querySelector(`#chart-${track_id}`);
             button.addEventListener('mouseover', (e) => { chart.hidden = false; layoutPhoto.hidden = true });
             button.addEventListener('mouseout', (e) => { chart.hidden = true; layoutPhoto.hidden = false });
 
@@ -336,11 +361,11 @@ const addTags = (listNo, setList) => {
     listOld = [];
     for (let i = 0; i < setList.length; i++) {
         const item = setList[i];
-        if (item.isNew) listIsNew.push(item.id);
-        if (item.lastP > 35) listAwait.push(item.id);
-        if (item.votes) listVoted.push(item.id);
-        if (item.isBet) listBet.push(item.id);
-        if (item.isOld) listOld.push(item.id);
+        if (item.weeks === 1) listIsNew.push(item.track_id);
+        if (item.last_position > 35) listAwait.push(item.track_id);
+        if (item.votes) listVoted.push(item.track_id);
+        if (item.is_veteran) listBet.push(item.track_id);
+        if (item.is_stale) listOld.push(item.track_id);
     }
 
     addInfoStatus();
@@ -360,10 +385,10 @@ const setSearch = (voteList, items) => {
     const searchCustom = searchSection.querySelector('#searchCustom');
 
     const listElement = items.map(item => ({
-        element: item,
-        author: item.querySelector('.vote-item__author').innerText.toLowerCase(),
-        title: item.querySelector('.vote-item__title').innerText.toLowerCase()
-    }));
+    element: item,
+    author: (item.querySelector('.vote-item__author')?.textContent || "").toLowerCase(),
+    title: (item.querySelector('.vote-item__title')?.textContent || "").toLowerCase()
+}));
 
     searchCustom.addEventListener('input', (e) => {
         const value = e.target.value.toLowerCase();
@@ -385,8 +410,8 @@ const addRemovedList = () => {
         for (let i = 0; i < rmList.length; i++) {
             const item = rmList[i];
             const ws = String(item.weeks).padStart(2, '0');
-            const lp = item.lastP ? `(${item.lastP})` : '';
-            removedString += `[${ws}] ${item.author} - ${item.title} ${lp}\n`;
+            const lp = item.last_position ? `(${item.last_position})` : '';
+            removedString += `[${ws}] ${item.artist} - ${item.title} ${lp}\n`;
         }
         removed.textContent = removedString;
     });
@@ -396,29 +421,30 @@ const addRemovedList = () => {
 
 const getVotes = (listNo, setList) => {
     const myVotes = {};
+    const noFrom = listNo - 100;
 
-    for (let i = 1; i <= listNo; i++) {
+    for (let i = noFrom; i <= listNo; i++) {
         const votesStr = localStorage.getItem("myVotes" + i);
         if (!votesStr) continue;
-        
+
         const votes = JSON.parse(votesStr);
         const last = (i === listNo);
 
         for (let j = 0; j < votes.length; j++) {
-            const id = votes[j];
-            if (myVotes[id]) {
-                myVotes[id].count++;
+            const track_id = votes[j];
+            if (myVotes[track_id]) {
+                myVotes[track_id].count++;
             } else {
-                myVotes[id] = { count: 1 };
+                myVotes[track_id] = { count: 1 };
             }
             if (last) {
-                myVotes[id].last = true;
+                myVotes[track_id].last = true;
             }
         }
     }
 
     for (let i = 0; i < setList.length; i++) {
-        setList[i].votes = myVotes[setList[i].id];
+        setList[i].votes = myVotes[setList[i].track_id];
     }
 }
 
@@ -447,7 +473,6 @@ const setVoteSection = (listNo) => {
 
     if (voteSection) {
         const cardBody = voteSection.querySelector('.card-body');
-
         const button = cardBody.querySelector('button');
         button.classList.remove('mb-lg-4');
 
@@ -463,40 +488,43 @@ const setVoteSection = (listNo) => {
             const checkedArray = Array.from(checkedItems);
 
             let listHTML = "";
-            const selectedIds = [];
+            let totalSeniority = 0;
+            const votedListArray = [];
+
             for (let i = 0; i < checkedArray.length; i++) {
                 const item = checkedArray[i];
+                const trackId = Number(item.value);
                 const vid = item.id;
-                const song = item.parentElement.lastChild.textContent.replace("\n", " - ");
-                listHTML += `<li for="${vid}">${song}</li>`;
-                selectedIds.push(item._value);
+
+                const author = item.closest('.vote-item').querySelector('.vote-item__author')?.textContent || "";
+                const title = item.closest('.vote-item').querySelector('.vote-item__title')?.textContent || "";
+                const song = `${author} - ${title}`.trim();
+
+                listHTML += `<li data-for="${vid}">${song}</li>`;
+                votedListArray.push(trackId);
+
+                if (seniorityDic[trackId]) {
+                    totalSeniority += seniorityDic[trackId];
+                }
             }
 
-            const averageSeniority = selectedIds.length ? 
-                selectedIds.reduce((acc, id) => acc + (seniorityDic[id] || 0), 0) / selectedIds.length : 0;
+            const averageSeniority = votedListArray.length ? totalSeniority / votedListArray.length : 0;
             votedSeniority.textContent = averageSeniority.toFixed(2);
 
-            votedList.textContent = null;
-            votedList.insertAdjacentHTML('beforeend', listHTML);
-
-            const votedItems = voteList.querySelectorAll('.vote-item input:checked');
-            const votedListArray = [];
-            for (let i = 0; i < votedItems.length; i++) {
-                votedListArray.push(+votedItems[i].value);
-            }
+            votedList.innerHTML = listHTML;
 
             localStorage.setItem("myVotes" + listNo, JSON.stringify(votedListArray));
         });
-        
+
         votedList.addEventListener("click", (e) => {
             if (e.target.tagName === 'LI') {
-                const forId = e.target.getAttribute("for");
+                const forId = e.target.getAttribute("data-for");
                 const input = voteList.querySelector(`#${forId}`);
                 if (input) input.click();
             }
         });
 
-        observer.observe(voteCounter, { characterData: true, subtree: true });
+        observer.observe(voteCounter, { characterData: true, subtree: true, childList: true });
     }
 }
 
@@ -515,6 +543,10 @@ const setVoteSection = (listNo) => {
             }
 
             const heading = document.querySelector('.header__heading-voting');
+            if (!heading) {
+                requestAnimationFrame(checkForElement);
+                return;
+            }
             listNo = +heading.textContent.split('#')[1];
             getVotes(listNo, setList);
 
@@ -525,7 +557,7 @@ const setVoteSection = (listNo) => {
             setVoteSection(listNo);
             addRemovedList();
         };
-        
+
         requestAnimationFrame(checkForElement);
     });
 })();
