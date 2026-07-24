@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      1.8
+// @version      1.8.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://glosuj.radio357.pl/app/lista/glosowanie
@@ -314,7 +314,10 @@ const addTags = (listNo, setList) => {
             element.insertAdjacentHTML('beforeend', tagLog);
         }
 
-        if (history) {
+        const historyParts = history.split(",");
+        const showHistory = historyParts.some(item => item.trim() !== '');
+
+        if (showHistory) {
             layoutRight.insertAdjacentHTML('afterbegin', `<div id="chart-${track_id}" class="ct-chart" hidden></div>`);
             const chart = layoutRight.querySelector(`#chart-${track_id}`);
             button.addEventListener('mouseover', (e) => { chart.hidden = false; layoutPhoto.hidden = true });
@@ -323,7 +326,7 @@ const addTags = (listNo, setList) => {
             const labels = [];
             for (let x = 0; x < 10; x++) labels.push(x + listNo - 10);
             const series = [];
-            const historyParts = history.split(",");
+
             for (let x = 0; x < historyParts.length; x++) {
                 series.push(-historyParts[x] || null);
             }
