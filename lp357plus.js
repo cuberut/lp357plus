@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      2.1.0
+// @version      2.1.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://radio357.pl/lista-piosenek/*
@@ -20,15 +20,16 @@ GM_addStyle("div.ct-chart g.ct-series-a .ct-line { stroke: #f95f1f }");
 GM_addStyle("div.ct-chart g.ct-series-a .ct-point { stroke: #f95f1f; fill: #f95f1f; }");
 GM_addStyle("div.tagLog { position: absolute; bottom: 0; right: 15px; text-align: right; font-size: 12px; }");
 
-// Minimalne style dla wstrzykniętego kontenera i licznika średniej
 GM_addStyle(`
-    div#infoBox { position: sticky; top: 150px; z-index: 100; background: #ffffff }
-    div#extraTools { margin-top: 15px; }
-    div#extraTools div, div#extraTools select { display: inline-block; width: 50%; }
-    span#infoVisible { display: inline-block; text-align: right; width: 30px; }
-    div.averageSeniority { display: inline-block!important; margin-left: 15px; }
-    strong#averageSeniority { display: inline-block!important; width: 30px; text-align: right; }
-    div#removedList { font-family: monospace; white-space: pre-line; font-size: 12px; text-align: left; }
+    #infoBox { position: sticky; top: 150px; z-index: 100; background: #ffffff; }
+    #extraTools { margin-top: 15px; }
+    #checkboxes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+    #checkboxes label { width: 100%; margin-left: 0; }
+    #checkboxes .content { margin-left: 30px; line-height: 1.2; display: inline-block; }
+    #infoVisible { display: inline-block; text-align: right; width: 30px; }
+    .averageSeniority { display: inline-block !important; }
+    #averageSeniority { display: inline-block !important; width: 30px; text-align: right; }
+    #removedList { font-family: monospace; white-space: pre-line; font-size: 12px; text-align: left; }
 `);
 
 //-----------------------------------------------
@@ -74,10 +75,11 @@ const getList = async (url, extend) => {
 //-----------------------------------------------
 
 const setInfoStatus = (amount) => `<p id="infoStatus">Liczba widocznych utworów: <strong><span id="infoVisible">${amount}</span>/<span>${amount}</span></strong> (<span id="infoPercent">100</span>%)</p>`;
-const setCheckIsNew = (amount) => `<div><input type="checkbox" id="onlyIsNew" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyIsNew"><span>Pokaż tylko nowości - ${amount} pozycji</span></label></div>`;
-const setCheckAwait = (amount) => `<div><input type="checkbox" id="onlyAwait" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="onlyAwait"><span>Pokaż tylko oczekujące - ${amount} pozycji</span></label></div>`;
-const setCheckBet = (amount) => `<div><input type="checkbox" id="hideBet" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="hideBet"><span>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label></div>`;
-const setCheckOld = (amount) => `<div><input type="checkbox" id="hideOld" class="custom-check custom-checkbox" ${amount || 'disabled'}><label for="hideOld"><span>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label></div>`;
+
+const setCheckIsNew = (amount) => `<label class="lp-checkbox-label" for="onlyIsNew"><input type="checkbox" id="onlyIsNew" class="custom-check custom-checkbox lp-checkbox" ${amount || 'disabled'} /><span class="lp-checkbox-custom"></span><span class='content'>Pokaż tylko nowości - ${amount} pozycji</span></label>`;
+const setCheckAwait = (amount) => `<label class="lp-checkbox-label" for="onlyAwait"><input type="checkbox" id="onlyAwait" class="custom-check custom-checkbox lp-checkbox" ${amount || 'disabled'} /><span class="lp-checkbox-custom"></span><span class='content'>Pokaż tylko oczekujące - ${amount} pozycji</span></label>`;
+const setCheckBet = (amount) => `<label class="lp-checkbox-label" for="hideBet"><input type="checkbox" id="hideBet" class="custom-check custom-checkbox lp-checkbox" ${amount || 'disabled'} /><span class="lp-checkbox-custom"></span><span class='content'>Ukryj beton (<i title="Dotyczy uworów zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
+const setCheckOld = (amount) => `<label class="lp-checkbox-label" for="hideOld"><input type="checkbox" id="hideOld" class="custom-check custom-checkbox lp-checkbox" ${amount || 'disabled'} /><span class="lp-checkbox-custom"></span><span class='content'>Ukryj starocie (<i title="Dotyczy uworów spoza zestawienia ze stażem dłuższym niż 5 tygodni">szczegóły</i>) - ${amount} pozycji</span></label>`;
 
 const getTagChartLog = (last_position, last_change, times, weeks) => {
     const ranksPart = last_position ? `<span>ostatnia poz.: ${last_position}` + (last_change ? ` (${last_change})` : '') + '</span>' : '';
@@ -92,7 +94,7 @@ const getTagVotes = (item) => `<div id="votes"><i class="${item.last ? 'fas' : '
 let extraTools, historyCharts, amountAll, infoVisible, infoPercent;
 let mainList, itemDict;
 let listIsNew, listAwait, listBet, listOld;
-let dicWeeks = {}; // Słownik przechowujący tygodnie (staż)
+let dicWeeks = {};
 
 const setWebsite = () => {
     const bannerHero = document.querySelector('#active_last_24hrs');
@@ -199,7 +201,7 @@ const addTags = (listNo, setList) => {
 
     mainList = Array.from(voteList.querySelectorAll("li.lp-song-item"));
     itemDict = {};
-    dicWeeks = {}; // Czyszczenie przed ponownym użyciem
+    dicWeeks = {};
 
     mainList.forEach(songItem => {
         const button = songItem.querySelector("button");
@@ -217,7 +219,6 @@ const addTags = (listNo, setList) => {
 
         if (!songItem) return;
 
-        // Zapisujemy staż w tygodniach do słownika dla obliczania średniej
         dicWeeks[id] = weeks || 0;
 
         const songDetails = songItem.querySelector('div.lp-song-details');
