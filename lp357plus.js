@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      2.2.0
+// @version      2.2.1
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://radio357.pl/lista-piosenek/*
@@ -34,12 +34,9 @@ GM_addStyle(`
 
 GM_addStyle(`
     #sortTools { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 14px; }
-    #sortTools .label { color: #111; }
-    #sortTools button { border: none; background: transparent; cursor: pointer; padding: 6px 12px; border-radius: 4px; display: flex; align-items: center; gap: 4px; font-family: inherit; font-size: inherit; color: #111; transition: background-color 0.2s; }
-    #sortTools button:hover { background: #f9fafb; }
-    #sortTools button.active { background: #f3f4f6; }
+    #sortTools button { font-size: 14px; padding: 10px 20px; }
     #sortTools button .arrow { display: none; font-weight: bold; }
-    #sortTools button.active .arrow { display: inline-block; }
+    #sortTools button.btnPurple .arrow { display: inline-block; }
 `);
 
 //-----------------------------------------------
@@ -301,9 +298,9 @@ const addSortTools = () => {
     const sortHTML = `
         <div id="sortTools">
             <span class="label">Kolejność:</span>
-            <button data-sort="weeks" data-order="asc" class="active">według stażu <span class="arrow">↑</span></button>
-            <button data-sort="alpha" data-order="asc">alfabetycznie <span class="arrow">↑</span></button>
-            <button data-sort="position" data-order="asc">według notowania <span class="arrow">↑</span></button>
+            <button data-sort="weeks" data-order="asc" class="btn btn-small btnPurple">według stażu <span class="arrow">↑</span></button>
+            <button data-sort="alpha" data-order="asc" class="btn btn-small btnPurple-outline">alfabetycznie <span class="arrow">↑</span></button>
+            <button data-sort="position" data-order="asc" class="btn btn-small btnPurple-outline">według notowania <span class="arrow">↑</span></button>
         </div>
     `;
 
@@ -369,13 +366,20 @@ const addSortTools = () => {
             const sortType = btn.getAttribute('data-sort');
             let order = btn.getAttribute('data-order');
 
-            if (btn.classList.contains('active')) {
+            if (btn.classList.contains('btnPurple')) {
+                // Jeśli klikamy w już aktywny przycisk, zmieniamy tylko kierunek
                 order = order === 'asc' ? 'desc' : 'asc';
                 btn.setAttribute('data-order', order);
                 btn.querySelector('.arrow').textContent = order === 'asc' ? '↑' : '↓';
             } else {
-                buttons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                // Jeśli klikamy w nowy przycisk, najpierw resetujemy wszystkie
+                buttons.forEach(b => {
+                    b.classList.remove('btnPurple');
+                    b.classList.add('btnPurple-outline');
+                });
+                // Następnie aktywujemy ten kliknięty
+                btn.classList.remove('btnPurple-outline');
+                btn.classList.add('btnPurple');
             }
 
             sortList(sortType, order);
