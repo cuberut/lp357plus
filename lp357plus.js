@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      2.1.1
+// @version      2.2.0
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://radio357.pl/lista-piosenek/*
@@ -30,6 +30,16 @@ GM_addStyle(`
     .averageSeniority { display: inline-block !important; }
     #averageSeniority { display: inline-block !important; width: 30px; text-align: right; }
     #removedList { font-family: monospace; white-space: pre-line; font-size: 12px; text-align: left; }
+`);
+
+GM_addStyle(`
+    #sortTools { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 14px; }
+    #sortTools .label { color: #111; }
+    #sortTools button { border: none; background: transparent; cursor: pointer; padding: 6px 12px; border-radius: 4px; display: flex; align-items: center; gap: 4px; font-family: inherit; font-size: inherit; color: #111; transition: background-color 0.2s; }
+    #sortTools button:hover { background: #f9fafb; }
+    #sortTools button.active { background: #f3f4f6; }
+    #sortTools button .arrow { display: none; font-weight: bold; }
+    #sortTools button.active .arrow { display: inline-block; }
 `);
 
 //-----------------------------------------------
@@ -95,6 +105,7 @@ let extraTools, historyCharts, amountAll, infoVisible, infoPercent;
 let mainList, itemDict;
 let listIsNew, listAwait, listBet, listOld;
 let dicWeeks = {};
+let dicSortData = {};
 
 const setWebsite = () => {
     const bannerHero = document.querySelector('#active_last_24hrs');
@@ -202,6 +213,7 @@ const addTags = (listNo, setList) => {
     mainList = Array.from(voteList.querySelectorAll("li.lp-song-item"));
     itemDict = {};
     dicWeeks = {};
+    dicSortData = {};
 
     mainList.forEach(songItem => {
         const button = songItem.querySelector("button");
@@ -214,12 +226,18 @@ const addTags = (listNo, setList) => {
     listOld = [];
 
     setList.forEach(item => {
-        const { id, track_id, last_position, last_change, times, weeks, votes, history } = item;
+        const { id, track_id, last_position, last_change, times, weeks, votes, history, artist, title } = item;
         const songItem = itemDict[id];
 
         if (!songItem) return;
 
         dicWeeks[id] = weeks || 0;
+
+        dicSortData[id] = {
+            weeks: weeks || 0,
+            position: last_position || 999, // 999 dla propozycji
+            alpha: artist && title ? `${artist} - ${title}`.toLowerCase() : songItem.textContent.trim().toLowerCase()
+        };
 
         const songDetails = songItem.querySelector('div.lp-song-details');
         if (songDetails) songDetails.style.position = 'relative';
@@ -276,6 +294,97 @@ const addTags = (listNo, setList) => {
     addInfoStatus();
     addCheckboxes();
 }
+
+//-----------------------------------------------
+
+const addSortTools = () => {
+    const sortHTML = `
+        <div id="sortTools">
+            <span class="label">Kolejność:</span>
+            <button data-sort="weeks" data-order="asc" class="active">według stażu <span class="arrow">↑</span></button>
+            <button data-sort="alpha" data-order="asc">alfabetycznie <span class="arrow">↑</span></button>
+            <button data-sort="position" data-order="asc">według notowania <span class="arrow">↑</span></button>
+        </div>
+    `;
+
+    extraTools.insertAdjacentHTML('afterbegin', sortHTML);
+
+    const container = extraTools.querySelector('#sortTools');
+    const buttons = container.querySelectorAll('button');
+
+    const sortList = (type, order) => {
+        if (!mainList || mainList.length === 0) return;
+
+        const ul = mainList[0].parentNode;
+
+        mainList.sort((a, b) => {
+            const idA = a.querySelector('button').getAttribute('data-r357api-id');
+            const idB = b.querySelector('button').getAttribute('data-r357api-id');
+
+            const dataA = dicSortData[idA] || { weeks: 0, position: 999, alpha: '' };
+            const dataB = dicSortData[idB] || { weeks: 0, position: 999, alpha: '' };
+
+            if (type === 'alpha') {
+                const compareResult = dataA.alpha.localeCompare(dataB.alpha, 'pl');
+                return order === 'asc' ? compareResult : -compareResult;
+            }
+
+            // Wymuszanie utworów notowanych na górze TYLKO dla sortowania po notowaniu (position)
+            if (type === 'position') {
+                const isChartedA = dataA.position < 999 ? 1 : 0;
+                const isChartedB = dataB.position < 999 ? 1 : 0;
+
+                if (isChartedA !== isChartedB) {
+                    return isChartedB - isChartedA;
+                }
+
+                if (dataA.position !== dataB.position) {
+                    return order === 'asc'
+                        ? (dataA.position < dataB.position ? -1 : 1)
+                        : (dataA.position < dataB.position ? 1 : -1);
+                }
+                return 0;
+            }
+
+            // Sortowanie dla całej puli łącznie w przypadku "według stażu"
+            if (type === 'weeks') {
+                if (dataA.weeks !== dataB.weeks) {
+                    return order === 'asc'
+                        ? (dataA.weeks < dataB.weeks ? -1 : 1)
+                        : (dataA.weeks < dataB.weeks ? 1 : -1);
+                }
+                // Drugorzędne sortowanie przy równej liczbie tygodni -> naturalna kolejność wg pozycji
+                // To zapewnia, że remisy rozstrzyga pozycja (notowane idą od 1 w dół, nienotowane spadają)
+                return dataA.position - dataB.position;
+            }
+
+            return 0;
+        });
+
+        mainList.forEach(item => ul.appendChild(item));
+    };
+
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sortType = btn.getAttribute('data-sort');
+            let order = btn.getAttribute('data-order');
+
+            if (btn.classList.contains('active')) {
+                order = order === 'asc' ? 'desc' : 'asc';
+                btn.setAttribute('data-order', order);
+                btn.querySelector('.arrow').textContent = order === 'asc' ? '↑' : '↓';
+            } else {
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            }
+
+            sortList(sortType, order);
+        });
+    });
+
+    // Inicjalizacyjne, domyślne sortowanie według stażu rosnąco
+    sortList('weeks', 'asc');
+};
 
 //-----------------------------------------------
 
@@ -370,6 +479,7 @@ const addRemovedList = () => {
 
             setWebsite();
             addTags(listNo, setList);
+            addSortTools();
             addAverageSeniority(votePatron);
             addRemovedList();
         };
