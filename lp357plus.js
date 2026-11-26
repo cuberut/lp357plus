@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         LP357+
-// @version      2.0.0
+// @version      2.1.0
 // @author       cuberut
 // @description  Wspomaganie głosowania LP357
 // @match        https://radio357.pl/lista-piosenek/*
@@ -20,13 +20,15 @@ GM_addStyle("div.ct-chart g.ct-series-a .ct-line { stroke: #f95f1f }");
 GM_addStyle("div.ct-chart g.ct-series-a .ct-point { stroke: #f95f1f; fill: #f95f1f; }");
 GM_addStyle("div.tagLog { position: absolute; bottom: 0; right: 15px; text-align: right; font-size: 12px; }");
 
-// Minimalne style dla wstrzykniętego kontenera (przyklejony do góry)
+// Minimalne style dla wstrzykniętego kontenera i licznika średniej
 GM_addStyle(`
     div#infoBox { position: sticky; top: 150px; z-index: 100; background: #ffffff }
     div#extraTools { margin-top: 15px; }
     div#extraTools div, div#extraTools select { display: inline-block; width: 50%; }
     span#infoVisible { display: inline-block; text-align: right; width: 30px; }
-    div#removedList { font-family: monospace; white-space: pre-wrap; font-size: 12px; text-align: left; }
+    div.averageSeniority { display: inline-block!important; margin-left: 15px; }
+    strong#averageSeniority { display: inline-block!important; width: 30px; text-align: right; }
+    div#removedList { font-family: monospace; white-space: pre-line; font-size: 12px; text-align: left; }
 `);
 
 //-----------------------------------------------
@@ -90,6 +92,7 @@ const getTagVotes = (item) => `<div id="votes"><i class="${item.last ? 'fas' : '
 let extraTools, historyCharts, amountAll, infoVisible, infoPercent;
 let mainList, itemDict;
 let listIsNew, listAwait, listBet, listOld;
+let dicWeeks = {}; // Słownik przechowujący tygodnie (staż)
 
 const setWebsite = () => {
     const bannerHero = document.querySelector('#active_last_24hrs');
@@ -178,7 +181,6 @@ const addCheckboxes = () => {
     const onlyAwait = checkboxesEl.querySelector("#onlyAwait");
     const hideOld = checkboxesEl.querySelector("#hideOld");
 
-    // Zoptymalizowane słowniki jako obiekty Set() dla błyskawicznego dostępu (O(1))
     const setIsNew = new Set(listIsNew);
     const setAwait = new Set(listAwait);
 
@@ -197,6 +199,7 @@ const addTags = (listNo, setList) => {
 
     mainList = Array.from(voteList.querySelectorAll("li.lp-song-item"));
     itemDict = {};
+    dicWeeks = {}; // Czyszczenie przed ponownym użyciem
 
     mainList.forEach(songItem => {
         const button = songItem.querySelector("button");
@@ -212,7 +215,10 @@ const addTags = (listNo, setList) => {
         const { id, track_id, last_position, last_change, times, weeks, votes, history } = item;
         const songItem = itemDict[id];
 
-        if (!songItem) return; // Ukryte pominięcie błędu zamiast console.log
+        if (!songItem) return;
+
+        // Zapisujemy staż w tygodniach do słownika dla obliczania średniej
+        dicWeeks[id] = weeks || 0;
 
         const songDetails = songItem.querySelector('div.lp-song-details');
         if (songDetails) songDetails.style.position = 'relative';
@@ -241,7 +247,7 @@ const addTags = (listNo, setList) => {
                 series: [ series ]
             }, {
                 height: '500px',
-                width: '550px',
+                width: '700px',
                 fullWidth: false,
                 fillHoles: false,
                 axisY: {
@@ -260,7 +266,6 @@ const addTags = (listNo, setList) => {
             }
         }
 
-        // Grupowanie utworów do filtrów
         if (weeks === 1) listIsNew.push(id);
         if (last_position > 35) listAwait.push(id);
         if (item.is_veteran) listBet.push(id);
@@ -272,6 +277,48 @@ const addTags = (listNo, setList) => {
 }
 
 //-----------------------------------------------
+
+const addAverageSeniority = (votePatron) => {
+    const voteCounter = votePatron.querySelector('.lpWrapper div[data-r357api-role="count"]');
+    if (!voteCounter) return;
+
+    voteCounter.insertAdjacentHTML('afterend', `
+        <div class="averageSeniority">
+            <span>Średni staż:</span>
+            <strong id="averageSeniority">-</strong>
+            <span>tyg.</span>
+        </div>
+    `);
+
+    const averageSeniorityEl = votePatron.querySelector('#averageSeniority');
+
+    const calculateAverage = () => {
+        if (!itemDict || Object.keys(dicWeeks).length === 0) return;
+
+        let sum = 0;
+        let count = 0;
+
+        Object.entries(itemDict).forEach(([id, item]) => {
+            const input = item.querySelector('input');
+            if (input && input.checked) {
+                if (dicWeeks[id] !== undefined) {
+                    sum += dicWeeks[id];
+                    count++;
+                }
+            }
+        });
+
+        averageSeniorityEl.innerText = count > 0 ? (sum / count).toFixed(1) : '-';
+    };
+
+    calculateAverage();
+
+    const observer = new MutationObserver(() => {
+        calculateAverage();
+    });
+
+    observer.observe(voteCounter, { childList: true, characterData: true, subtree: true });
+}
 
 const addRemovedList = () => {
     const details = document.querySelector('[data-r357api-role="details-trigger"]');
@@ -310,10 +357,10 @@ const addRemovedList = () => {
 (function init() {
     getList(urlSettingsList, true).then(setList => {
         const checkForElement = () => {
-            const voteListEl = document.querySelector('.vote_patron');
+            const votePatron = document.querySelector('.vote_patron');
             const heading = document.querySelector('[data-r357api-type="current-chart-no"]');
 
-            if (!voteListEl || !heading) {
+            if (!votePatron || !heading) {
                 requestAnimationFrame(checkForElement);
                 return;
             }
@@ -322,6 +369,7 @@ const addRemovedList = () => {
 
             setWebsite();
             addTags(listNo, setList);
+            addAverageSeniority(votePatron);
             addRemovedList();
         };
 
